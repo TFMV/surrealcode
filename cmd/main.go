@@ -1,53 +1,61 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/TFMV/surrealcode"
+	"github.com/docopt/docopt-go"
 )
 
+const usage = `SurrealCode - Go Code Analysis Tool.
+
+Usage:
+  surrealcode analyze [--dir=<path>] [--db=<url>] [--namespace=<ns>] [--database=<db>] [--db-user=<user>] [--db-pass=<pass>]
+  surrealcode -h | --help
+  surrealcode --version
+
+Options:
+  -h --help             Show this help message.
+  --version            Show version.
+  --dir=<path>         Directory to scan for Go files [default: .].
+  --db=<url>           SurrealDB connection URL [default: ws://localhost:8000/rpc].
+  --namespace=<ns>     SurrealDB namespace [default: test].
+  --database=<db>      SurrealDB database [default: test].
+  --db-user=<user>     SurrealDB username [default: root].
+  --db-pass=<pass>     SurrealDB password [default: root].
+`
+
+const version = "0.1.0"
+
 func main() {
-	var (
-		dir          = flag.String("dir", ".", "Directory to scan for Go files")
-		outputFormat = flag.String("format", "dot", "Output format for call graph: dot or d3")
-		outputFile   = flag.String("out", "", "Output file (if empty, prints to stdout)")
-		dbURL        = flag.String("db", "ws://localhost:8000/rpc", "SurrealDB connection URL")
-		namespace    = flag.String("namespace", "test", "SurrealDB namespace")
-		database     = flag.String("database", "test", "SurrealDB database")
-		dbUser       = flag.String("db-user", "root", "SurrealDB username")
-		dbPass       = flag.String("db-pass", "root", "SurrealDB password")
-	)
-	flag.Parse()
-
-	analyzer, err := surrealcode.NewAnalyzer(*dbURL, *namespace, *database, *dbUser, *dbPass)
+	opts, err := docopt.ParseArgs(usage, os.Args[1:], version)
 	if err != nil {
-		log.Fatalf("Failed to create analyzer: %v", err)
+		log.Fatalf("Error parsing arguments: %v", err)
 	}
 
-	if err := analyzer.Initialize(); err != nil {
-		log.Fatalf("Failed to initialize analyzer: %v", err)
-	}
+	if cmd, _ := opts.Bool("analyze"); cmd {
+		dir, _ := opts.String("--dir")
+		dbURL, _ := opts.String("--db")
+		namespace, _ := opts.String("--namespace")
+		database, _ := opts.String("--database")
+		dbUser, _ := opts.String("--db-user")
+		dbPass, _ := opts.String("--db-pass")
 
-	visualization, err := analyzer.GenerateVisualization(*dir, *outputFormat)
-	if err != nil {
-		log.Fatalf("Failed to generate visualization: %v", err)
-	}
-
-	if *outputFile != "" {
-		if err := os.WriteFile(*outputFile, []byte(visualization), 0644); err != nil {
-			log.Fatalf("Failed to write output file: %v", err)
+		analyzer, err := surrealcode.NewAnalyzer(dbURL, namespace, database, dbUser, dbPass)
+		if err != nil {
+			log.Fatalf("Failed to create analyzer: %v", err)
 		}
-		fmt.Printf("Export written to %s\n", *outputFile)
-	} else {
-		fmt.Println(visualization)
-	}
 
-	if err := analyzer.AnalyzeDirectory(*dir); err != nil {
-		log.Fatalf("Failed to analyze directory: %v", err)
-	}
+		if err := analyzer.Initialize(); err != nil {
+			log.Fatalf("Failed to initialize analyzer: %v", err)
+		}
 
-	fmt.Println("Code analysis completed successfully!")
+		if err := analyzer.AnalyzeDirectory(dir); err != nil {
+			log.Fatalf("Failed to analyze directory: %v", err)
+		}
+
+		fmt.Println("Code analysis completed successfully!")
+	}
 }
