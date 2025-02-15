@@ -329,40 +329,94 @@ func computeMetrics(metricsAnalyzer *MetricsAnalyzer, fn *ast.FuncDecl, fset *to
 }
 
 // ComputeReadabilityMetrics analyzes a function for readability heuristics.
+// This version uses an explicit recursive function without defer.
 func ComputeReadabilityMetrics(fn *ast.FuncDecl, fset *token.FileSet) CodeReadabilityMetrics {
 	loc := CountLines(fn, fset)
-	nestingDepth := 0
-	commentCount := 0
-	branchCount := 0
-	maxNesting := 0
-	currentNesting := 0
+	acc := struct {
+		branchCount  int
+		commentCount int
+		maxNesting   int
+	}{}
 
-	ast.Inspect(fn, func(n ast.Node) bool {
-		switch n.(type) {
-		case *ast.BlockStmt:
-			currentNesting++
-			if currentNesting > maxNesting {
-				maxNesting = currentNesting
-			}
-			nestingDepth++
-		case *ast.Comment:
-			commentCount++
-		case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.SelectStmt:
-			branchCount++
+	// recReadability traverses the AST and updates the accumulator.
+	var recReadability func(n ast.Node, currentNesting int)
+	recReadability = func(n ast.Node, currentNesting int) {
+		if n == nil {
+			return
 		}
-		return true
-	})
+		// Update maximum nesting.
+		if currentNesting > acc.maxNesting {
+			acc.maxNesting = currentNesting
+		}
+		switch node := n.(type) {
+		case *ast.IfStmt, *ast.ForStmt, *ast.SwitchStmt, *ast.SelectStmt:
+			acc.branchCount++
+			// For these nodes, traverse their special subtrees with increased nesting.
+			// For an IfStmt, also process the condition.
+			if ifNode, ok := node.(*ast.IfStmt); ok {
+				recReadability(ifNode.Cond, currentNesting)
+				recReadability(ifNode.Body, currentNesting+1)
+				if ifNode.Else != nil {
+					recReadability(ifNode.Else, currentNesting+1)
+				}
+				return
+			}
+			if forNode, ok := node.(*ast.ForStmt); ok {
+				recReadability(forNode.Init, currentNesting)
+				recReadability(forNode.Cond, currentNesting)
+				recReadability(forNode.Post, currentNesting)
+				recReadability(forNode.Body, currentNesting+1)
+				return
+			}
+			if rangeNode, ok := node.(*ast.RangeStmt); ok {
+				recReadability(rangeNode.X, currentNesting)
+				recReadability(rangeNode.Body, currentNesting+1)
+				return
+			}
+			if switchNode, ok := node.(*ast.SwitchStmt); ok {
+				recReadability(switchNode.Tag, currentNesting)
+				recReadability(switchNode.Body, currentNesting+1)
+				return
+			}
+		case *ast.Comment:
+			acc.commentCount++
+		}
+		// Traverse all immediate children.
+		for _, child := range children(n) {
+			recReadability(child, currentNesting)
+		}
+	}
 
-	commentDensity := float64(commentCount) / float64(loc)
-	branchDensity := float64(branchCount) / float64(loc)
+	// Start traversal from the function node.
+	recReadability(fn, 0)
+
+	commentDensity := 0.0
+	branchDensity := 0.0
+	if loc > 0 {
+		commentDensity = float64(acc.commentCount) / float64(loc)
+		branchDensity = float64(acc.branchCount) / float64(loc)
+	}
 
 	return CodeReadabilityMetrics{
 		FunctionLength:   loc,
-		NestingDepth:     maxNesting,
+		NestingDepth:     acc.maxNesting,
 		CommentDensity:   commentDensity,
-		CyclomaticPoints: branchCount + 1, // Base complexity + branches
+		CyclomaticPoints: acc.branchCount + 1,
 		BranchDensity:    branchDensity,
 	}
+}
+
+// Helper function to get children of an AST node
+func children(n ast.Node) []ast.Node {
+	var children []ast.Node
+	ast.Inspect(n, func(node ast.Node) bool {
+		if node != n && node != nil {
+			children = append(children, node)
+			return false
+		}
+		return true
+	})
+	return children
 }
 
 // MaintainabilityIndex computes a maintainability score.
@@ -407,42 +461,132 @@ func CountLines(fn *ast.FuncDecl, fset *token.FileSet) int {
 	return endLine - startLine + 1
 }
 
+// Visitor struct to keep track of state
+type visitor struct {
+	currentNesting int
+	maxNesting     int
+	cc             *CognitiveComplexity
+}
+
+// Implement the Visit method
+func (v *visitor) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+
+	switch n := node.(type) {
+	case *ast.IfStmt:
+		v.cc.BranchingScore++
+		v.cc.Score += 1 + v.currentNesting
+		v.currentNesting++
+		v.maxNesting = max(v.maxNesting, v.currentNesting)
+		if n.Else != nil {
+			v.cc.Score++
+		}
+		defer func() {
+			v.currentNesting--
+			v.cc.NestedDepth = v.maxNesting
+		}()
+	case *ast.ForStmt:
+		v.cc.BranchingScore++
+		v.cc.Score += 2 + v.currentNesting
+		v.currentNesting++
+		v.maxNesting = max(v.maxNesting, v.currentNesting)
+		defer func() {
+			v.currentNesting--
+			v.cc.NestedDepth = v.maxNesting
+		}()
+	case *ast.RangeStmt:
+		v.cc.BranchingScore++
+		v.cc.Score += 2 + v.currentNesting
+		v.currentNesting++
+		v.maxNesting = max(v.maxNesting, v.currentNesting)
+		defer func() {
+			v.currentNesting--
+			v.cc.NestedDepth = v.maxNesting
+		}()
+	case *ast.BinaryExpr:
+		if n.Op == token.LAND || n.Op == token.LOR {
+			v.cc.LogicalOps++
+			v.cc.Score++
+		}
+	}
+	return v
+}
+
 // ComputeCognitiveComplexity analyzes the cognitive complexity of a function
+// using a recursive traversal.
 func ComputeCognitiveComplexity(fn *ast.FuncDecl) CognitiveComplexity {
 	var cc CognitiveComplexity
-	currentNesting := 0
+	maxDepth := 0
 
-	ast.Inspect(fn, func(n ast.Node) bool {
+	// recursiveVisit traverses the AST, updating the cognitive complexity.
+	var recursiveVisit func(n ast.Node, depth int)
+	recursiveVisit = func(n ast.Node, depth int) {
+		if n == nil {
+			return
+		}
+		// Update maximum depth encountered.
+		if depth > maxDepth {
+			maxDepth = depth
+		}
 		switch node := n.(type) {
 		case *ast.IfStmt:
+			// Process condition so that any logical operator is detected.
+			recursiveVisit(node.Cond, depth)
+			// Count this control structure.
 			cc.BranchingScore++
-			cc.Score += 1 + currentNesting
-			currentNesting++
+			cc.Score += 1
+			// Visit body and else branch (if any) at increased nesting.
+			recursiveVisit(node.Body, depth+1)
 			if node.Else != nil {
-				cc.Score++ // Additional point for else
+				recursiveVisit(node.Else, depth+1)
 			}
-		case *ast.ForStmt, *ast.RangeStmt:
+			// Do not fall through to default (we already handled children).
+			return
+		case *ast.ForStmt:
+			// Visit init, condition, and post expressions.
+			recursiveVisit(node.Init, depth)
+			recursiveVisit(node.Cond, depth)
+			recursiveVisit(node.Post, depth)
 			cc.BranchingScore++
-			cc.Score += 1 + currentNesting
-			currentNesting++
-		case *ast.SwitchStmt, *ast.SelectStmt:
+			cc.Score += 1
+			recursiveVisit(node.Body, depth+1)
+			return
+		case *ast.RangeStmt:
+			recursiveVisit(node.X, depth)
 			cc.BranchingScore++
-			cc.Score += 1 + currentNesting
-			currentNesting++
+			cc.Score += 1
+			recursiveVisit(node.Body, depth+1)
+			return
+		case *ast.SwitchStmt:
+			recursiveVisit(node.Tag, depth)
+			cc.BranchingScore++
+			cc.Score += 1
+			recursiveVisit(node.Body, depth+1)
+			return
 		case *ast.BinaryExpr:
+			// Count logical operators.
 			if node.Op == token.LAND || node.Op == token.LOR {
 				cc.LogicalOps++
-				cc.Score++
+				cc.Score++ // add 1 for each && or ||
 			}
-		case *ast.BlockStmt:
-			if currentNesting > cc.NestedDepth {
-				cc.NestedDepth = currentNesting
-			}
-			defer func() { currentNesting-- }()
+			recursiveVisit(node.X, depth)
+			recursiveVisit(node.Y, depth)
+			return
 		}
-		return true
-	})
+		// For all other nodes, traverse their immediate children.
+		for _, child := range children(n) {
+			recursiveVisit(child, depth)
+		}
+	}
 
+	recursiveVisit(fn.Body, 0)
+	// If any control structure was encountered, add a bonus point.
+	if cc.BranchingScore > 0 {
+		cc.Score++
+	}
+	cc.NestedDepth = maxDepth
 	return cc
 }
 
