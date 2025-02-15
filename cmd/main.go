@@ -13,19 +13,19 @@ import (
 const usage = `SurrealCode - Go Code Analysis Tool.
 
 Usage:
-  surrealcode analyze [--dir=<path>] [--db=<url>] [--namespace=<ns>] [--database=<db>] [--db-user=<user>] [--db-pass=<pass>]
+  surrealcode analyze [options]
   surrealcode -h | --help
   surrealcode --version
 
 Options:
   -h --help            Show this help message.
   --version            Show version.
-  --dir=<path>         Directory to scan for Go files [default: .].
-  --db=<url>           SurrealDB connection URL [default: ws://localhost:8000/rpc].
-  --namespace=<ns>     SurrealDB namespace [default: test].
-  --database=<db>      SurrealDB database [default: test].
-  --db-user=<user>     SurrealDB username [default: root].
-  --db-pass=<pass>     SurrealDB password [default: root].
+  --dir=<path>        Directory to scan for Go files [default: .].
+  --db=<url>          SurrealDB connection URL [default: ws://localhost:8000].
+  --namespace=<ns>    SurrealDB namespace [default: test].
+  --database=<db>     SurrealDB database [default: test].
+  --db-user=<user>    SurrealDB username [default: root].
+  --db-pass=<pass>    SurrealDB password [default: root].
 `
 
 const version = "0.1.0"
@@ -58,5 +58,8 @@ func main() {
 		}
 
 		fmt.Println("Code analysis completed successfully!")
+	} else {
+		fmt.Println(usage)
+		os.Exit(1)
 	}
 }

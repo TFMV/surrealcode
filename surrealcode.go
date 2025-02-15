@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/TFMV/surrealcode/schema"
 	"github.com/golang/groupcache/lru"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
@@ -160,6 +161,11 @@ func (a *Analyzer) Initialize() error {
 
 	if err := a.DB.Authenticate(token); err != nil {
 		return fmt.Errorf("failed to authenticate: %w", err)
+	}
+
+	// Initialize schema
+	if err := schema.InitializeSchema(context.Background(), a.DB); err != nil {
+		return fmt.Errorf("failed to initialize schema: %w", err)
 	}
 
 	return nil
@@ -663,11 +669,13 @@ func StoreInSurrealDBBatch(ctx context.Context, db *surrealdb.DB, report Analysi
 		// Create call relationships.
 		for _, callee := range fn.Callees {
 			query := fmt.Sprintf(`
+				LET $caller = SELECT * FROM functions WHERE caller = '%s';
+				LET $callee = SELECT * FROM functions WHERE caller = '%s';
 				CREATE calls SET 
-					in = functions:%q,
-					out = functions:%q,
-					file = %q,
-					package = %q`,
+					from = $caller[0].id,
+					to = $callee[0].id,
+					file = '%s',
+					package = '%s'`,
 				fn.Caller, callee, fn.File, fn.Package,
 			)
 			if _, err := surrealdb.Query[any](db, query, map[string]interface{}{}); err != nil {
