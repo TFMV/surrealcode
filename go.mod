@@ -7,7 +7,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8
 	github.com/stretchr/testify v1.8.4
 	github.com/surrealdb/surrealdb.go v0.3.2
-	golang.org/x/sync v0.11.0
 )
 
 require (

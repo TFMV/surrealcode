@@ -1,8 +1,8 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
@@ -140,31 +140,46 @@ type HotspotFunction struct {
 
 // PrettyPrint returns a formatted summary of the analysis
 func (r AnalysisReport) PrettyPrint() string {
-	var summary strings.Builder
-	fmt.Fprintf(&summary, "Analysis Summary:\n"+
-		"Total Functions: %d\n"+
-		"Total Structs: %d\n"+
-		"Total Interfaces: %d\n"+
-		"Total Globals: %d\n"+
-		"Total Imports: %d\n\n",
-		len(r.Functions), len(r.Structs), len(r.Interfaces),
-		len(r.Globals), len(r.Imports))
-
-	fmt.Fprintf(&summary, "Function Metrics:\n")
-	for _, fn := range r.Functions {
-		fmt.Fprintf(&summary, "\n%s (%s):\n"+
-			"  Complexity: %d\n"+
-			"  Lines: %d\n"+
-			"  Maintainability: %.2f\n"+
-			"  Nesting Depth: %d\n"+
-			"  Is Unused: %v\n",
-			fn.Caller, fn.File,
-			fn.Metrics.CyclomaticComplexity,
-			fn.Metrics.LinesOfCode,
-			fn.Metrics.Maintainability,
-			fn.Metrics.Readability.NestingDepth,
-			fn.Metrics.IsUnused)
+	type FunctionSummary struct {
+		Name            string  `json:"name"`
+		File            string  `json:"file"`
+		Complexity      int     `json:"complexity"`
+		Lines           int     `json:"lines"`
+		Maintainability float64 `json:"maintainability"`
+		NestingDepth    int     `json:"nesting_depth"`
+		IsUnused        bool    `json:"is_unused"`
 	}
 
-	return summary.String()
+	type Summary struct {
+		TotalFunctions int               `json:"total_functions"`
+		TotalStructs   int               `json:"total_structs"`
+		TotalImports   int               `json:"total_imports"`
+		Functions      []FunctionSummary `json:"functions"`
+	}
+
+	summary := Summary{
+		TotalFunctions: len(r.Functions),
+		TotalStructs:   len(r.Structs),
+		TotalImports:   len(r.Imports),
+		Functions:      make([]FunctionSummary, 0, len(r.Functions)),
+	}
+
+	for _, fn := range r.Functions {
+		summary.Functions = append(summary.Functions, FunctionSummary{
+			Name:            fn.Caller,
+			File:            fn.File,
+			Complexity:      fn.Metrics.CyclomaticComplexity,
+			Lines:           fn.Metrics.LinesOfCode,
+			Maintainability: fn.Metrics.Maintainability,
+			NestingDepth:    fn.Metrics.Readability.NestingDepth,
+			IsUnused:        fn.Metrics.IsUnused,
+		})
+	}
+
+	jsonBytes, err := json.MarshalIndent(summary, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("Error generating summary: %v", err)
+	}
+
+	return string(jsonBytes)
 }
