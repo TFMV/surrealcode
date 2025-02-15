@@ -35,6 +35,10 @@ func teardownTestDB() {
 }
 
 func TestAnalyzer_ParseGoFile(t *testing.T) {
+	analyzer := &Analyzer{
+		exprCache: NewExprCache(100),
+	}
+
 	tests := []struct {
 		name     string
 		input    string
@@ -99,7 +103,7 @@ func TestAnalyzer_ParseGoFile(t *testing.T) {
 			require.NoError(t, os.WriteFile(tmpFile, []byte(tt.input), 0644))
 
 			// Parse file
-			funcs, structs, globals, imports, err := parseGoFile(tmpFile)
+			funcs, structs, ifaces, globals, imports, err := analyzer.parseGoFile(tmpFile)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -109,6 +113,7 @@ func TestAnalyzer_ParseGoFile(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Len(t, funcs, tt.wantFunc)
 			assert.Len(t, structs, tt.wantStr)
+			assert.Len(t, ifaces, 0)
 			assert.Len(t, globals, tt.wantGlob)
 			assert.Len(t, imports, tt.wantImp)
 		})
@@ -116,6 +121,8 @@ func TestAnalyzer_ParseGoFile(t *testing.T) {
 }
 
 func TestDetectRecursion(t *testing.T) {
+	analyzer := &Analyzer{}
+
 	tests := []struct {
 		name      string
 		functions map[string]FunctionCall
@@ -159,7 +166,7 @@ func TestDetectRecursion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := detectRecursion(tt.functions)
+			result := analyzer.detectRecursion(tt.functions)
 			for fname, want := range tt.want {
 				assert.Equal(t, want, result[fname].IsRecursive)
 			}
@@ -225,6 +232,8 @@ func TestExprToString(t *testing.T) {
 }
 
 func BenchmarkDetectRecursion(b *testing.B) {
+	analyzer := &Analyzer{}
+
 	functions := map[string]FunctionCall{
 		"a": {Caller: "a", Callees: []string{"b"}},
 		"b": {Caller: "b", Callees: []string{"c"}},
@@ -234,6 +243,6 @@ func BenchmarkDetectRecursion(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		detectRecursion(functions)
+		analyzer.detectRecursion(functions)
 	}
 }
