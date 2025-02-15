@@ -1,7 +1,6 @@
 package surrealcode
 
 import (
-	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -51,17 +50,6 @@ type ImportDefinition struct {
 	Path    string           `json:"path"`
 	File    string           `json:"file"`
 	Package string           `json:"package"`
-}
-
-// GraphNode and GraphLink for D3.js export
-type GraphNode struct {
-	ID   string `json:"id"`
-	Type string `json:"type"` // e.g., "function" or "struct"
-}
-
-type GraphLink struct {
-	Source string `json:"source"`
-	Target string `json:"target"`
 }
 
 // Cache for expression string representations
@@ -128,21 +116,9 @@ func (a *Analyzer) AnalyzeDirectory(dir string) error {
 	return nil
 }
 
-// GenerateVisualization creates a visualization of the code analysis
-func (a *Analyzer) GenerateVisualization(dir, format string) (string, error) {
-	functions, _, globals, imports, err := scanDirectory(dir)
-	if err != nil {
-		return "", fmt.Errorf("failed to scan directory: %w", err)
-	}
-
-	switch strings.ToLower(format) {
-	case "dot":
-		return generateGraphvizDOT(functions, imports, globals), nil
-	case "d3":
-		return generateD3JSON(functions, imports, globals)
-	default:
-		return "", fmt.Errorf("unsupported visualization format: %s", format)
-	}
+// GetAnalysis returns the analysis data without storing it
+func (a *Analyzer) GetAnalysis(dir string) ([]FunctionCall, []StructDefinition, []GlobalVariable, []ImportDefinition, error) {
+	return scanDirectory(dir)
 }
 
 // ---------------------
@@ -344,147 +320,6 @@ func scanDirectory(dir string) ([]FunctionCall, []StructDefinition, []GlobalVari
 }
 
 // ---------------------
-// Visualization Export
-// ---------------------
-
-// generateGraphvizDOT creates a DOT representation of the complete code graph.
-func generateGraphvizDOT(functions []FunctionCall, imports []ImportDefinition, globals []GlobalVariable) string {
-	var sb strings.Builder
-	sb.WriteString("digraph CodeGraph {\n")
-	sb.WriteString("  // Node styles\n")
-	sb.WriteString("  node [shape=box];\n")
-	sb.WriteString("  node [style=filled];\n\n")
-
-	// Create subgraph for functions
-	sb.WriteString("  subgraph cluster_functions {\n")
-	sb.WriteString("    label=\"Functions\";\n")
-	sb.WriteString("    node [fillcolor=lightblue];\n")
-	for _, fc := range functions {
-		attrs := []string{fmt.Sprintf("label=\"%s\"", fc.Caller)}
-		if fc.IsMethod {
-			attrs = append(attrs, "shape=diamond")
-		}
-		if fc.IsRecursive {
-			attrs = append(attrs, "peripheries=2")
-		}
-		sb.WriteString(fmt.Sprintf("    \"%s\" [%s];\n", fc.Caller, strings.Join(attrs, ", ")))
-	}
-	sb.WriteString("  }\n\n")
-
-	// Create subgraph for imports
-	sb.WriteString("  subgraph cluster_imports {\n")
-	sb.WriteString("    label=\"Imports\";\n")
-	sb.WriteString("    node [fillcolor=lightgreen];\n")
-	for _, imp := range imports {
-		sb.WriteString(fmt.Sprintf("    \"import_%s\" [label=\"%s\"];\n", imp.Path, imp.Path))
-	}
-	sb.WriteString("  }\n\n")
-
-	// Create subgraph for globals
-	sb.WriteString("  subgraph cluster_globals {\n")
-	sb.WriteString("    label=\"Globals\";\n")
-	sb.WriteString("    node [fillcolor=lightyellow];\n")
-	for _, g := range globals {
-		sb.WriteString(fmt.Sprintf("    \"global_%s\" [label=\"%s: %s\"];\n", g.Name, g.Name, g.Type))
-	}
-	sb.WriteString("  }\n\n")
-
-	// Create edges
-	sb.WriteString("  // Function call edges\n")
-	for _, fc := range functions {
-		for _, callee := range fc.Callees {
-			sb.WriteString(fmt.Sprintf("  \"%s\" -> \"%s\";\n", fc.Caller, callee))
-		}
-	}
-
-	// Create import usage edges
-	sb.WriteString("  // Import usage edges\n")
-	for _, imp := range imports {
-		for _, fc := range functions {
-			for _, callee := range fc.Callees {
-				if strings.HasPrefix(callee, imp.Path) {
-					sb.WriteString(fmt.Sprintf("  \"%s\" -> \"import_%s\" [style=dashed];\n", fc.Caller, imp.Path))
-				}
-			}
-		}
-	}
-
-	sb.WriteString("}\n")
-	return sb.String()
-}
-
-// generateD3JSON creates a JSON structure for D3.js force-directed graph.
-func generateD3JSON(functions []FunctionCall, imports []ImportDefinition, globals []GlobalVariable) (string, error) {
-	nodeMap := map[string]GraphNode{}
-	var links []GraphLink
-
-	// Add function nodes
-	for _, fc := range functions {
-		nodeMap[fc.Caller] = GraphNode{
-			ID:   fc.Caller,
-			Type: "function",
-		}
-	}
-
-	// Add import nodes
-	for _, imp := range imports {
-		nodeMap["import_"+imp.Path] = GraphNode{
-			ID:   imp.Path,
-			Type: "import",
-		}
-	}
-
-	// Add global nodes
-	for _, g := range globals {
-		nodeMap["global_"+g.Name] = GraphNode{
-			ID:   g.Name,
-			Type: "global",
-		}
-	}
-
-	// Add function call links
-	for _, fc := range functions {
-		for _, callee := range fc.Callees {
-			links = append(links, GraphLink{
-				Source: fc.Caller,
-				Target: callee,
-			})
-		}
-	}
-
-	// Add import usage links
-	for _, imp := range imports {
-		for _, fc := range functions {
-			for _, callee := range fc.Callees {
-				if strings.HasPrefix(callee, imp.Path) {
-					links = append(links, GraphLink{
-						Source: fc.Caller,
-						Target: "import_" + imp.Path,
-					})
-				}
-			}
-		}
-	}
-
-	// Convert nodeMap to slice
-	var nodes []GraphNode
-	for _, node := range nodeMap {
-		nodes = append(nodes, node)
-	}
-
-	output := map[string]interface{}{
-		"nodes": nodes,
-		"links": links,
-	}
-
-	bytes, err := json.MarshalIndent(output, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal JSON: %w", err)
-	}
-	return string(bytes), nil
-}
-
-// ---------------------
 // SurrealDB Integration
 // ---------------------
 
@@ -571,26 +406,43 @@ func detectRecursion(functions map[string]FunctionCall) map[string]FunctionCall 
 					lowlink[caller] = min(lowlink[caller], lowlink[callee])
 				} else if inStack[callee] {
 					lowlink[caller] = min(lowlink[caller], indices[callee])
+					// Mark direct recursion
+					if callee == caller {
+						fn.IsRecursive = true
+						functions[caller] = fn
+					}
 				}
 			}
 		}
 
+		// Found a strongly connected component
 		if lowlink[caller] == indices[caller] {
+			var sccSize int
+			var sccNodes []string
 			for {
 				n := stack[len(stack)-1]
 				stack = stack[:len(stack)-1]
 				inStack[n] = false
-				if fn, exists := functions[n]; exists {
-					fn.IsRecursive = true
-					functions[n] = fn
-				}
+				sccNodes = append(sccNodes, n)
+				sccSize++
 				if n == caller {
 					break
+				}
+			}
+
+			// If SCC has more than one node or contains self-recursion, mark all nodes as recursive
+			if sccSize > 1 {
+				for _, n := range sccNodes {
+					if fn, exists := functions[n]; exists {
+						fn.IsRecursive = true
+						functions[n] = fn
+					}
 				}
 			}
 		}
 	}
 
+	// Run Tarjan's algorithm on all nodes
 	for caller := range functions {
 		if _, found := indices[caller]; !found {
 			tarjan(caller)
