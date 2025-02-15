@@ -1,42 +1,24 @@
-package surrealcode
+package analysis_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/TFMV/surrealcode/analysis"
+	"github.com/TFMV/surrealcode/db"
+	"github.com/TFMV/surrealcode/expr"
+	"github.com/TFMV/surrealcode/parser"
+	"github.com/TFMV/surrealcode/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	surrealdb "github.com/surrealdb/surrealdb.go"
 )
 
-func TestMain(m *testing.M) {
-	// Setup test environment
-	setupTestDB()
-	code := m.Run()
-	// Cleanup
-	teardownTestDB()
-	os.Exit(code)
-}
-
-func setupTestDB() *surrealdb.DB {
-	db, err := surrealdb.New("ws://localhost:8000/rpc")
-	if err != nil {
-		panic(err)
-	}
-	if err := db.Use("test", "test"); err != nil {
-		panic(err)
-	}
-	return db
-}
-
-func teardownTestDB() {
-	// Cleanup test database
-}
-
 func TestAnalyzer_ParseGoFile(t *testing.T) {
-	analyzer := &Analyzer{
-		exprCache: NewExprCache(100),
+	analyzer := &analysis.Analyzer{
+		ExprCache: expr.NewExprCache(100),
+		Parser:    parser.NewParser(expr.NewExprCache(100)),
 	}
 
 	tests := []struct {
@@ -94,43 +76,43 @@ func TestAnalyzer_ParseGoFile(t *testing.T) {
 			wantImp: 2,
 			wantErr: false,
 		},
+		{
+			name:    "invalid syntax",
+			input:   `package main func`,
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Write test file
 			tmpFile := filepath.Join(t.TempDir(), "test.go")
 			require.NoError(t, os.WriteFile(tmpFile, []byte(tt.input), 0644))
 
-			// Parse file
-			funcs, structs, ifaces, globals, imports, err := analyzer.parseGoFile(tmpFile)
-
+			analysis, err := analyzer.Parser.ParseFile(tmpFile)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
 
 			assert.NoError(t, err)
-			assert.Len(t, funcs, tt.wantFunc)
-			assert.Len(t, structs, tt.wantStr)
-			assert.Len(t, ifaces, 0)
-			assert.Len(t, globals, tt.wantGlob)
-			assert.Len(t, imports, tt.wantImp)
+			assert.Len(t, analysis.Functions, tt.wantFunc)
+			assert.Len(t, analysis.Structs, tt.wantStr)
+			assert.Len(t, analysis.Interfaces, 0)
+			assert.Len(t, analysis.Globals, tt.wantGlob)
+			assert.Len(t, analysis.Imports, tt.wantImp)
 		})
 	}
 }
 
 func TestDetectRecursion(t *testing.T) {
-	analyzer := &Analyzer{}
-
 	tests := []struct {
 		name      string
-		functions map[string]FunctionCall
-		want      map[string]bool // function name -> expected recursive status
+		functions map[string]types.FunctionCall
+		want      map[string]bool
 	}{
 		{
 			name: "direct recursion",
-			functions: map[string]FunctionCall{
+			functions: map[string]types.FunctionCall{
 				"factorial": {
 					Caller:  "factorial",
 					Callees: []string{"factorial"},
@@ -142,7 +124,7 @@ func TestDetectRecursion(t *testing.T) {
 		},
 		{
 			name: "indirect recursion",
-			functions: map[string]FunctionCall{
+			functions: map[string]types.FunctionCall{
 				"a": {Caller: "a", Callees: []string{"b"}},
 				"b": {Caller: "b", Callees: []string{"c"}},
 				"c": {Caller: "c", Callees: []string{"a"}},
@@ -155,18 +137,23 @@ func TestDetectRecursion(t *testing.T) {
 		},
 		{
 			name: "no recursion",
-			functions: map[string]FunctionCall{
+			functions: map[string]types.FunctionCall{
 				"main": {Caller: "main", Callees: []string{"fmt.Println"}},
 			},
 			want: map[string]bool{
 				"main": false,
 			},
 		},
+		{
+			name:      "empty functions",
+			functions: map[string]types.FunctionCall{},
+			want:      map[string]bool{},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := analyzer.detectRecursion(tt.functions)
+			result := analysis.DetectRecursion(tt.functions)
 			for fname, want := range tt.want {
 				assert.Equal(t, want, result[fname].IsRecursive)
 			}
@@ -174,67 +161,34 @@ func TestDetectRecursion(t *testing.T) {
 	}
 }
 
-// Helper function to create a test project
-func setupTestProject(t *testing.T) string {
-	dir := t.TempDir()
-	files := map[string]string{
-		"main.go": `package main
-			import "fmt"
-			func main() { fmt.Println("hello") }`,
-		"util/helper.go": `package util
-			type Helper struct{}
-			func (h Helper) DoWork() {}`,
+func TestAnalyzer_Initialize(t *testing.T) {
+	analyzer := &analysis.Analyzer{
+		ExprCache: expr.NewExprCache(100),
+		DB:        db.NewMockDB(),
 	}
 
-	for name, content := range files {
-		path := filepath.Join(dir, name)
-		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
-		require.NoError(t, os.WriteFile(path, []byte(content), 0644))
-	}
-
-	return dir
+	err := analyzer.Initialize(context.Background())
+	assert.NoError(t, err)
 }
 
-func TestExprToString(t *testing.T) {
-	tests := []struct {
-		name  string
-		input string
-		want  string
-	}{
-		{
-			name:  "simple type",
-			input: "type X struct { F int }",
-			want:  "int",
-		},
-		{
-			name:  "pointer type",
-			input: "type X struct { F *string }",
-			want:  "*string",
-		},
-		{
-			name:  "selector type",
-			input: "type X struct { F fmt.Stringer }",
-			want:  "fmt.Stringer",
-		},
+func TestAnalyzer_GetAnalysis(t *testing.T) {
+	analyzer := &analysis.Analyzer{
+		ExprCache: expr.NewExprCache(100),
+		Parser:    parser.NewParser(expr.NewExprCache(100)),
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Parse the input to get an ast.Expr
-			tmpFile := filepath.Join(t.TempDir(), "test.go")
-			content := "package test\n" + tt.input
-			require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0644))
+	dir := t.TempDir()
+	err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(`package main
+		func main() {}`), 0644)
+	require.NoError(t, err)
 
-			// Test the expression conversion
-			// Note: This needs to be implemented based on how you get the ast.Expr
-		})
-	}
+	report, err := analyzer.GetAnalysis(context.Background(), dir)
+	assert.NoError(t, err)
+	assert.Len(t, report.Functions, 1)
 }
 
 func BenchmarkDetectRecursion(b *testing.B) {
-	analyzer := &Analyzer{}
-
-	functions := map[string]FunctionCall{
+	functions := map[string]types.FunctionCall{
 		"a": {Caller: "a", Callees: []string{"b"}},
 		"b": {Caller: "b", Callees: []string{"c"}},
 		"c": {Caller: "c", Callees: []string{"d"}},
@@ -243,6 +197,6 @@ func BenchmarkDetectRecursion(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		analyzer.detectRecursion(functions)
+		analysis.DetectRecursion(functions)
 	}
 }
