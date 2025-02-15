@@ -7,9 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go/ast"
+	"go/parser"
+	"go/token"
+
 	"github.com/TFMV/surrealcode/db"
 	"github.com/TFMV/surrealcode/expr"
-	"github.com/TFMV/surrealcode/parser"
+	surrealcode "github.com/TFMV/surrealcode/parser"
 	"github.com/TFMV/surrealcode/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -18,7 +22,28 @@ import (
 type Analyzer struct {
 	DB        db.DB
 	ExprCache *expr.ExprCache
-	Parser    *parser.Parser
+	Parser    *surrealcode.Parser
+	Metrics   *MetricsAnalyzer
+}
+
+// MetricsAnalyzer handles all metrics computation
+type MetricsAnalyzer struct {
+	duplicationDetector *CodeDuplicationDetector
+}
+
+// NewMetricsAnalyzer creates a new metrics analyzer
+func NewMetricsAnalyzer() *MetricsAnalyzer {
+	return &MetricsAnalyzer{
+		duplicationDetector: NewCodeDuplicationDetector(),
+	}
+}
+
+func (m *MetricsAnalyzer) AnalyzeFunction(fn *ast.FuncDecl) (int, int, bool) {
+	halstead := ComputeHalsteadMetrics(fn)
+	readability := ComputeReadabilityMetrics(fn)
+	isDuplicate := m.duplicationDetector.DetectDuplication(fn)
+
+	return int(halstead.Difficulty), readability.FunctionLength, isDuplicate
 }
 
 // NewAnalyzer creates a new Analyzer with the given configuration
@@ -32,7 +57,8 @@ func NewAnalyzer(config db.Config) (*Analyzer, error) {
 	return &Analyzer{
 		DB:        sdb,
 		ExprCache: cache,
-		Parser:    parser.NewParser(cache),
+		Parser:    surrealcode.NewParser(cache),
+		Metrics:   NewMetricsAnalyzer(),
 	}, nil
 }
 
@@ -71,7 +97,7 @@ func (a *Analyzer) GetAnalysis(ctx context.Context, dir string) (types.AnalysisR
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
-	resultCh := make(chan parser.FileAnalysis, len(filePaths))
+	resultCh := make(chan surrealcode.FileAnalysis, len(filePaths))
 
 	// Process files concurrently
 	for _, path := range filePaths {
@@ -101,19 +127,22 @@ func (a *Analyzer) GetAnalysis(ctx context.Context, dir string) (types.AnalysisR
 	var report types.AnalysisReport
 	functionMap := make(map[string]types.FunctionCall)
 
+	fset := token.NewFileSet()
 	for res := range resultCh {
 		for _, fn := range res.Functions {
+			file, _ := parser.ParseFile(fset, fn.File, nil, parser.AllErrors) // Use fn.File
+			if funcDecl := findFunction(file, fn.Caller); funcDecl != nil {
+				complexity, loc, isDup := a.Metrics.AnalyzeFunction(funcDecl)
+				fn.CyclomaticComplexity = complexity
+				fn.LinesOfCode = loc
+				fn.IsDuplicate = isDup
+			}
 			functionMap[fn.Caller] = fn
 		}
 		report.Structs = append(report.Structs, res.Structs...)
 		report.Interfaces = append(report.Interfaces, res.Interfaces...)
 		report.Globals = append(report.Globals, res.Globals...)
 		report.Imports = append(report.Imports, res.Imports...)
-	}
-
-	// Wait for all goroutines and check for errors
-	if err := g.Wait(); err != nil {
-		return types.AnalysisReport{}, err
 	}
 
 	// Detect recursion
@@ -125,4 +154,13 @@ func (a *Analyzer) GetAnalysis(ctx context.Context, dir string) (types.AnalysisR
 	}
 
 	return report, nil
+}
+
+func findFunction(file *ast.File, name string) *ast.FuncDecl {
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == name {
+			return fn
+		}
+	}
+	return nil
 }

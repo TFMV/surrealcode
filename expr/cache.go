@@ -86,4 +86,6 @@ func (c *ExprCache) ToString(expr ast.Expr) string {
 	return result
 }
 
-// ... rest of ExprCache methods ...
+func (c *ExprCache) Clear() {
+	c.cache.Clear()
+}
