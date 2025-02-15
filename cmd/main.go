@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -17,7 +18,7 @@ Usage:
   surrealcode --version
 
 Options:
-  -h --help             Show this help message.
+  -h --help            Show this help message.
   --version            Show version.
   --dir=<path>         Directory to scan for Go files [default: .].
   --db=<url>           SurrealDB connection URL [default: ws://localhost:8000/rpc].
@@ -52,7 +53,7 @@ func main() {
 			log.Fatalf("Failed to initialize analyzer: %v", err)
 		}
 
-		if err := analyzer.AnalyzeDirectory(dir); err != nil {
+		if err := analyzer.AnalyzeDirectory(context.Background(), dir); err != nil {
 			log.Fatalf("Failed to analyze directory: %v", err)
 		}
 
