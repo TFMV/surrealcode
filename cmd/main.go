@@ -6,7 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/TFMV/surrealcode"
+	"github.com/TFMV/surrealcode/analysis"
+	"github.com/TFMV/surrealcode/db"
 	"github.com/docopt/docopt-go"
 )
 
@@ -44,12 +45,18 @@ func main() {
 		dbUser, _ := opts.String("--db-user")
 		dbPass, _ := opts.String("--db-pass")
 
-		analyzer, err := surrealcode.NewAnalyzer(dbURL, namespace, database, dbUser, dbPass)
+		analyzer, err := analysis.NewAnalyzer(db.Config{
+			URL:       dbURL,
+			Namespace: namespace,
+			Database:  database,
+			Username:  dbUser,
+			Password:  dbPass,
+		})
 		if err != nil {
 			log.Fatalf("Failed to create analyzer: %v", err)
 		}
 
-		if err := analyzer.Initialize(); err != nil {
+		if err := analyzer.Initialize(context.Background()); err != nil {
 			log.Fatalf("Failed to initialize analyzer: %v", err)
 		}
 
