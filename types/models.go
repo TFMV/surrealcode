@@ -16,6 +16,7 @@ type FunctionCall struct {
 	IsRecursive          bool             `json:"is_recursive"`
 	CyclomaticComplexity int              `json:"cyclomatic_complexity"`
 	LinesOfCode          int              `json:"lines_of_code"`
+	IsDuplicate          bool             `json:"is_duplicate"`
 }
 
 // StructDefinition represents a struct declaration

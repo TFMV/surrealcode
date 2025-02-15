@@ -175,6 +175,7 @@ func TestAnalyzer_GetAnalysis(t *testing.T) {
 	analyzer := &analysis.Analyzer{
 		ExprCache: expr.NewExprCache(100),
 		Parser:    parser.NewParser(expr.NewExprCache(100)),
+		Metrics:   analysis.NewMetricsAnalyzer(),
 	}
 
 	dir := t.TempDir()
@@ -199,4 +200,35 @@ func BenchmarkDetectRecursion(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		analysis.DetectRecursion(functions)
 	}
+}
+
+func TestAnalyzerMetrics(t *testing.T) {
+	analyzer := &analysis.Analyzer{
+		ExprCache: expr.NewExprCache(100),
+		Parser:    parser.NewParser(expr.NewExprCache(100)),
+		Metrics:   analysis.NewMetricsAnalyzer(),
+	}
+
+	src := `package test
+		func complex(x, y int) int {
+			a := x + y
+			b := x * y
+			if a > b {
+				return a - b
+			}
+			return b / a
+		}`
+
+	dir := t.TempDir()
+	tmpFile := filepath.Join(dir, "test.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0644))
+
+	report, err := analyzer.GetAnalysis(context.Background(), dir)
+	require.NoError(t, err)
+	require.Len(t, report.Functions, 1)
+
+	fn := report.Functions[0]
+	assert.Greater(t, fn.CyclomaticComplexity, 0)
+	assert.Greater(t, fn.LinesOfCode, 0)
+	assert.False(t, fn.IsDuplicate)
 }
