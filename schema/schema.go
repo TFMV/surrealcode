@@ -1,97 +1,94 @@
 package schema
 
 import (
+	"context"
 	"fmt"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
 )
 
-// InitializeSchema sets up the database schema and indexes for SurrealCode
-func InitializeSchema(db *surrealdb.DB) error {
-	schemas := []string{
-		// Define functions table
-		`DEFINE TABLE functions SCHEMAFULL;
-		 DEFINE FIELD name ON functions TYPE string;
-		 DEFINE FIELD file ON functions TYPE string;
-		 DEFINE FIELD package ON functions TYPE string;
-		 DEFINE FIELD params ON functions TYPE array;
-		 DEFINE FIELD returns ON functions TYPE array;
-		 DEFINE FIELD is_method ON functions TYPE bool;
-		 DEFINE FIELD struct ON functions TYPE option<string>;
-		 DEFINE FIELD is_recursive ON functions TYPE bool;
-		 DEFINE FIELD complexity ON functions TYPE int;
-		 DEFINE FIELD created_at ON functions TYPE datetime DEFAULT time::now();
-		 DEFINE FIELD updated_at ON functions TYPE datetime;
-		 DEFINE INDEX func_name ON functions FIELDS name;
-		 DEFINE INDEX func_file ON functions FIELDS file;
-		 DEFINE INDEX func_package ON functions FIELDS package;`,
+// Schema contains all SurrealDB schema definitions
+const Schema = `
+-- Functions table (nodes)
+DEFINE TABLE functions SCHEMAFULL;
+DEFINE FIELD caller ON functions TYPE string ASSERT $value != NONE;
+DEFINE FIELD file ON functions TYPE string;
+DEFINE FIELD package ON functions TYPE string ASSERT $value != NONE;
+DEFINE FIELD params ON functions TYPE array;
+DEFINE FIELD returns ON functions TYPE array;
+DEFINE FIELD is_method ON functions TYPE bool;
+DEFINE FIELD struct ON functions TYPE option<string>;
+DEFINE FIELD is_recursive ON functions TYPE bool;
+DEFINE FIELD cyclomatic_complexity ON functions TYPE int;
+DEFINE FIELD lines_of_code ON functions TYPE int;
+DEFINE FIELD created_at ON functions TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON functions TYPE datetime DEFAULT time::now();
+DEFINE INDEX function_name ON functions FIELDS package, caller;
 
-		// Define structs table
-		`DEFINE TABLE structs SCHEMAFULL;
-		 DEFINE FIELD name ON structs TYPE string;
-		 DEFINE FIELD file ON structs TYPE string;
-		 DEFINE FIELD package ON structs TYPE string;
-		 DEFINE FIELD fields ON structs TYPE array;
-		 DEFINE FIELD created_at ON structs TYPE datetime DEFAULT time::now();
-		 DEFINE INDEX struct_name ON structs FIELDS name;
-		 DEFINE INDEX struct_file ON structs FIELDS file;`,
+-- Calls table (edges: function-to-function relationships)
+DEFINE TABLE calls SCHEMAFULL;
+DEFINE FIELD from ON calls TYPE record<functions> ASSERT $value != NONE;
+DEFINE FIELD to ON calls TYPE record<functions> ASSERT $value != NONE;
+DEFINE FIELD file ON calls TYPE string;
+DEFINE FIELD package ON calls TYPE string;
+DEFINE INDEX call_relation ON calls FIELDS from, to;
 
-		// Define globals table
-		`DEFINE TABLE globals SCHEMAFULL;
-		 DEFINE FIELD name ON globals TYPE string;
-		 DEFINE FIELD type ON globals TYPE string;
-		 DEFINE FIELD value ON globals TYPE string;
-		 DEFINE FIELD file ON globals TYPE string;
-		 DEFINE FIELD package ON globals TYPE string;
-		 DEFINE FIELD created_at ON globals TYPE datetime DEFAULT time::now();
-		 DEFINE INDEX global_name ON globals FIELDS name;
-		 DEFINE INDEX global_file ON globals FIELDS file;`,
+-- Structs table
+DEFINE TABLE structs SCHEMAFULL;
+DEFINE FIELD name ON structs TYPE string ASSERT $value != NONE;
+DEFINE FIELD file ON structs TYPE string;
+DEFINE FIELD package ON structs TYPE string ASSERT $value != NONE;
+DEFINE INDEX struct_name ON structs FIELDS package, name;
 
-		// Define imports table
-		`DEFINE TABLE imports SCHEMAFULL;
-		 DEFINE FIELD path ON imports TYPE string;
-		 DEFINE FIELD file ON imports TYPE string;
-		 DEFINE FIELD package ON imports TYPE string;
-		 DEFINE FIELD created_at ON imports TYPE datetime DEFAULT time::now();
-		 DEFINE INDEX import_path ON imports FIELDS path;`,
+-- Methods relation (edges: struct-to-function)
+DEFINE TABLE methods SCHEMAFULL;
+DEFINE FIELD struct ON methods TYPE record<structs> ASSERT $value != NONE;
+DEFINE FIELD function ON methods TYPE record<functions> ASSERT $value != NONE;
 
-		// Define the call relationships as an edge table
-		`DEFINE TABLE calls SCHEMAFULL;
-		 DEFINE FIELD from ON calls TYPE record<functions>;
-		 DEFINE FIELD to ON calls TYPE record<functions>;
-		 DEFINE FIELD file ON calls TYPE string;
-		 DEFINE FIELD package ON calls TYPE string;
-		 DEFINE INDEX call_relation ON calls FIELDS from, to;`,
+-- Interfaces table
+DEFINE TABLE interfaces SCHEMAFULL;
+DEFINE FIELD name ON interfaces TYPE string ASSERT $value != NONE;
+DEFINE FIELD methods ON interfaces TYPE array;
+DEFINE FIELD file ON interfaces TYPE string;
+DEFINE FIELD package ON interfaces TYPE string ASSERT $value != NONE;
+DEFINE INDEX interface_name ON interfaces FIELDS package, name;
 
-		// Define struct-field relationships
-		`DEFINE TABLE struct_fields SCHEMALESS AS EDGE;
-		 DEFINE FIELD struct ON struct_fields TYPE record(structs);
-		 DEFINE FIELD field ON struct_fields TYPE string;
-		 DEFINE FIELD type ON struct_fields TYPE string;
-		 DEFINE FIELD created_at ON struct_fields TYPE datetime DEFAULT time::now();
-		 DEFINE INDEX struct_field_relation ON struct_fields FIELDS struct, field;`,
+-- Interface implementations
+DEFINE TABLE implements SCHEMAFULL;
+DEFINE FIELD struct ON implements TYPE record<structs> ASSERT $value != NONE;
+DEFINE FIELD interface ON implements TYPE record<interfaces> ASSERT $value != NONE;
 
-		// Define function-struct relationships
-		`DEFINE TABLE method_of SCHEMALESS AS EDGE;
-		 DEFINE FIELD function ON method_of TYPE record(functions);
-		 DEFINE FIELD struct ON method_of TYPE record(structs);
-		 DEFINE FIELD created_at ON method_of TYPE datetime DEFAULT time::now();
-		 DEFINE INDEX method_struct_relation ON method_of FIELDS function, struct;`,
+-- Globals table
+DEFINE TABLE globals SCHEMAFULL;
+DEFINE FIELD name ON globals TYPE string ASSERT $value != NONE;
+DEFINE FIELD type ON globals TYPE string;
+DEFINE FIELD value ON globals TYPE option<string>;
+DEFINE FIELD file ON globals TYPE string;
+DEFINE FIELD package ON globals TYPE string ASSERT $value != NONE;
+DEFINE INDEX global_name ON globals FIELDS package, name;
 
-		// Define function-global variable relationships
-		`DEFINE TABLE uses_global SCHEMALESS AS EDGE;
-		 DEFINE FIELD function ON uses_global TYPE record(functions);
-		 DEFINE FIELD global ON uses_global TYPE record(globals);
-		 DEFINE FIELD created_at ON uses_global TYPE datetime DEFAULT time::now();
-		 DEFINE INDEX function_global_relation ON uses_global FIELDS function, global;`,
+-- References table (edges: function-to-global relationships)
+DEFINE TABLE references SCHEMAFULL;
+DEFINE FIELD function ON references TYPE record<functions> ASSERT $value != NONE;
+DEFINE FIELD global ON references TYPE record<globals> ASSERT $value != NONE;
+
+-- Imports table
+DEFINE TABLE imports SCHEMAFULL;
+DEFINE FIELD path ON imports TYPE string ASSERT $value != NONE;
+DEFINE FIELD file ON imports TYPE string;
+DEFINE FIELD package ON imports TYPE string ASSERT $value != NONE;
+
+-- Dependencies table (edges: function-to-import relationships)
+DEFINE TABLE dependencies SCHEMAFULL;
+DEFINE FIELD function ON dependencies TYPE record<functions> ASSERT $value != NONE;
+DEFINE FIELD import ON dependencies TYPE record<imports> ASSERT $value != NONE;
+`
+
+// InitializeSchema sets up the database schema
+func InitializeSchema(ctx context.Context, db *surrealdb.DB) error {
+	// Execute schema definition
+	if _, err := surrealdb.Query[any](db, Schema, map[string]interface{}{}); err != nil {
+		return fmt.Errorf("failed to initialize schema: %w", err)
 	}
-
-	// Execute each schema definition
-	for _, schema := range schemas {
-		if _, err := surrealdb.Query[any](db, schema, map[string]interface{}{}); err != nil {
-			return fmt.Errorf("schema initialization error: %w", err)
-		}
-	}
-
 	return nil
 }
