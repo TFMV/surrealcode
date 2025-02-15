@@ -60,7 +60,7 @@ func TestComputeReadabilityMetrics(t *testing.T) {
 	file, _ := parser.ParseFile(fset, "", src, parser.AllErrors)
 	fn := findFunction(file, "example")
 
-	metrics := ComputeReadabilityMetrics(fn)
+	metrics := ComputeReadabilityMetrics(fn, fset)
 	assert.Greater(t, float64(metrics.FunctionLength), 0.0)
 	assert.Greater(t, float64(metrics.NestingDepth), 0.0)
 	assert.GreaterOrEqual(t, metrics.CommentDensity, 0.0)
@@ -76,7 +76,7 @@ func TestMaintainabilityIndex(t *testing.T) {
 	file, _ := parser.ParseFile(fset, "", src, parser.AllErrors)
 	fn := findFunction(file, "example")
 
-	metrics := ComputeReadabilityMetrics(fn)
+	metrics := ComputeReadabilityMetrics(fn, fset)
 	maintainability := MaintainabilityIndex(metrics, 1, true)
 	assert.Less(t, maintainability, 171.0)     // Max possible value
 	assert.Greater(t, maintainability, -200.0) // Reasonable lower bound
@@ -93,7 +93,7 @@ func TestCountLines(t *testing.T) {
 	file, _ := parser.ParseFile(fset, "", src, parser.AllErrors)
 	fn := findFunction(file, "example")
 
-	lines := CountLines(fn)
+	lines := CountLines(fn, fset)
 	assert.Greater(t, lines, 0)
 }
 
@@ -156,7 +156,7 @@ func TestReadabilityWithNestedBlocks(t *testing.T) {
 	file, _ := parser.ParseFile(fset, "", src, parser.AllErrors)
 	fn := findFunction(file, "nested")
 
-	metrics := ComputeReadabilityMetrics(fn)
+	metrics := ComputeReadabilityMetrics(fn, fset)
 	assert.GreaterOrEqual(t, metrics.NestingDepth, 3) // Should detect deep nesting
 }
 
