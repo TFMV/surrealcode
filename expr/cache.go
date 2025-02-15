@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"go/ast"
 	"strings"
+	"sync"
 
 	"github.com/golang/groupcache/lru"
 )
 
 type ExprCache struct {
 	cache *lru.Cache
+	mu    sync.RWMutex // Add mutex for thread safety
 }
 
 func NewExprCache(size int) *ExprCache {
@@ -19,6 +21,8 @@ func NewExprCache(size int) *ExprCache {
 }
 
 func (c *ExprCache) Get(expr ast.Expr) (string, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if val, ok := c.cache.Get(expr); ok {
 		return val.(string), true
 	}
@@ -26,14 +30,30 @@ func (c *ExprCache) Get(expr ast.Expr) (string, bool) {
 }
 
 func (c *ExprCache) Put(expr ast.Expr, str string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.cache.Add(expr, str)
 }
 
 func (c *ExprCache) ToString(expr ast.Expr) string {
-	if str, ok := c.Get(expr); ok {
-		return str
+	// First try with read lock
+	c.mu.RLock()
+	if val, ok := c.cache.Get(expr); ok {
+		c.mu.RUnlock()
+		return val.(string)
+	}
+	c.mu.RUnlock()
+
+	// If not found, acquire write lock and compute
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Check again in case another goroutine computed it
+	if val, ok := c.cache.Get(expr); ok {
+		return val.(string)
 	}
 
+	// Generate string representation
 	var result string
 	switch e := expr.(type) {
 	case *ast.Ident:
@@ -82,7 +102,7 @@ func (c *ExprCache) ToString(expr ast.Expr) string {
 		result = fmt.Sprintf("<%T>", expr)
 	}
 
-	c.Put(expr, result)
+	c.cache.Add(expr, result)
 	return result
 }
 

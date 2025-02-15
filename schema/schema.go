@@ -19,8 +19,29 @@ DEFINE FIELD returns ON functions TYPE array;
 DEFINE FIELD is_method ON functions TYPE bool;
 DEFINE FIELD struct ON functions TYPE option<string>;
 DEFINE FIELD is_recursive ON functions TYPE bool;
-DEFINE FIELD cyclomatic_complexity ON functions TYPE int;
-DEFINE FIELD lines_of_code ON functions TYPE int;
+DEFINE FIELD metrics ON functions TYPE object {
+    cyclomatic_complexity: int,
+    lines_of_code: int,
+    is_duplicate: bool,
+    is_unused: bool,
+    halstead_metrics: {
+        volume: float,
+        difficulty: float,
+        effort: float
+    },
+    cognitive_complexity: {
+        score: int,
+        nested_depth: int,
+        logical_ops: int,
+        branching_score: int
+    },
+    readability: {
+        nesting_depth: int,
+        comment_density: float,
+        branch_density: float
+    },
+    maintainability: float
+};
 DEFINE FIELD created_at ON functions TYPE datetime DEFAULT time::now();
 DEFINE FIELD updated_at ON functions TYPE datetime DEFAULT time::now();
 DEFINE INDEX function_name ON functions FIELDS package, caller;

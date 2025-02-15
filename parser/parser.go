@@ -31,55 +31,62 @@ type FileAnalysis struct {
 	Imports    []types.ImportDefinition
 }
 
-func (p *Parser) ParseFile(filename string) (FileAnalysis, error) {
+func (p *Parser) ParseFile(path string) (FileAnalysis, error) {
+	fmt.Println("  Starting parse of:", path)
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, filename, nil, parser.AllErrors)
+
+	fmt.Println("  Reading file...")
+	file, err := parser.ParseFile(fset, path, nil, parser.AllErrors)
 	if err != nil {
-		return FileAnalysis{}, fmt.Errorf("failed to parse %s: %w", filename, err)
+		return FileAnalysis{}, fmt.Errorf("failed to parse %s: %w", path, err)
 	}
 
-	packageName := file.Name.Name
-	structsMap := make(map[string]types.StructDefinition)
-	interfacesMap := make(map[string]types.InterfaceDefinition)
+	fmt.Println("  Extracting package info...")
+	pkg := file.Name.Name
+
+	fmt.Println("  Analyzing functions...")
+	var functions []types.FunctionCall
+	var structs []types.StructDefinition
+	var interfaces []types.InterfaceDefinition
 	var globals []types.GlobalVariable
 	var imports []types.ImportDefinition
-	functionMap := make(map[string]types.FunctionCall)
 
 	for _, decl := range file.Decls {
+		fmt.Printf("  Processing declaration type: %T\n", decl)
 		switch d := decl.(type) {
 		case *ast.FuncDecl:
-			// Handle function declarations
+			fmt.Printf("    Processing function: %s\n", d.Name.Name)
 			fn := types.FunctionCall{
 				Caller:  d.Name.Name,
-				File:    filename,
-				Package: packageName,
+				File:    path,
+				Package: pkg,
 				Params:  make([]string, 0),
 				Returns: make([]string, 0),
 				Callees: make([]string, 0),
 			}
 
-			// Parse parameters
 			if d.Type.Params != nil {
 				for _, param := range d.Type.Params.List {
-					fn.Params = append(fn.Params, p.exprCache.ToString(param.Type))
+					paramType := simpleTypeString(param.Type) // Use simple type conversion
+					fn.Params = append(fn.Params, paramType)
 				}
 			}
 
-			// Parse return values
 			if d.Type.Results != nil {
 				for _, ret := range d.Type.Results.List {
-					fn.Returns = append(fn.Returns, p.exprCache.ToString(ret.Type))
+					retType := simpleTypeString(ret.Type) // Use simple type conversion
+					fn.Returns = append(fn.Returns, retType)
 				}
 			}
 
 			if d.Recv != nil {
 				fn.IsMethod = true
 				if len(d.Recv.List) > 0 {
-					fn.Struct = p.exprCache.ToString(d.Recv.List[0].Type)
+					fn.Struct = simpleTypeString(d.Recv.List[0].Type)
 				}
 			}
-			functionMap[fn.Caller] = fn
-
+			functions = append(functions, fn)
+			fmt.Printf("    Function processed: %s\n", d.Name.Name)
 		case *ast.GenDecl:
 			switch d.Tok {
 			case token.IMPORT:
@@ -87,8 +94,8 @@ func (p *Parser) ParseFile(filename string) (FileAnalysis, error) {
 					if imp, ok := spec.(*ast.ImportSpec); ok {
 						imports = append(imports, types.ImportDefinition{
 							Path:    strings.Trim(imp.Path.Value, `"`),
-							File:    filename,
-							Package: packageName,
+							File:    path,
+							Package: pkg,
 						})
 					}
 				}
@@ -100,8 +107,8 @@ func (p *Parser) ParseFile(filename string) (FileAnalysis, error) {
 								Name:    name.Name,
 								Type:    p.exprCache.ToString(vs.Type),
 								Value:   p.exprCache.ToString(vs.Values[i]),
-								File:    filename,
-								Package: packageName,
+								File:    path,
+								Package: pkg,
 							})
 						}
 					}
@@ -110,11 +117,11 @@ func (p *Parser) ParseFile(filename string) (FileAnalysis, error) {
 				for _, spec := range d.Specs {
 					if ts, ok := spec.(*ast.TypeSpec); ok {
 						if _, ok := ts.Type.(*ast.StructType); ok {
-							structsMap[ts.Name.Name] = types.StructDefinition{
+							structs = append(structs, types.StructDefinition{
 								Name:    ts.Name.Name,
-								File:    filename,
-								Package: packageName,
-							}
+								File:    path,
+								Package: pkg,
+							})
 						}
 					}
 				}
@@ -122,21 +129,7 @@ func (p *Parser) ParseFile(filename string) (FileAnalysis, error) {
 		}
 	}
 
-	var functions []types.FunctionCall
-	for _, fn := range functionMap {
-		functions = append(functions, fn)
-	}
-
-	var structs []types.StructDefinition
-	for _, s := range structsMap {
-		structs = append(structs, s)
-	}
-
-	var interfaces []types.InterfaceDefinition
-	for _, i := range interfacesMap {
-		interfaces = append(interfaces, i)
-	}
-
+	fmt.Println("  Parse complete")
 	return FileAnalysis{
 		Functions:  functions,
 		Structs:    structs,
@@ -144,4 +137,20 @@ func (p *Parser) ParseFile(filename string) (FileAnalysis, error) {
 		Globals:    globals,
 		Imports:    imports,
 	}, nil
+}
+
+// Simple type conversion without using cache
+func simpleTypeString(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return t.Name
+	case *ast.StarExpr:
+		return "*" + simpleTypeString(t.X)
+	case *ast.SelectorExpr:
+		return simpleTypeString(t.X) + "." + t.Sel.Name
+	case *ast.ArrayType:
+		return "[]" + simpleTypeString(t.Elt)
+	default:
+		return fmt.Sprintf("%T", expr)
+	}
 }
