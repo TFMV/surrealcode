@@ -61,28 +61,35 @@ func (s *SurrealDB) StoreAnalysis(ctx context.Context, report types.AnalysisRepo
 		if _, err := surrealdb.Create[types.FunctionCall](s.db, models.Table("functions"), fn); err != nil {
 			return fmt.Errorf("error storing function %s: %v", fn.Caller, err)
 		}
+	}
 
-		// Create call relationships
-		for _, callee := range fn.Callees {
-			query := fmt.Sprintf(`
-				LET $caller = SELECT * FROM functions WHERE caller = '%s';
-				LET $callee = SELECT * FROM functions WHERE caller = '%s';
-				CREATE calls SET 
-					from = $caller[0].id,
-					to = $callee[0].id,
-					file = '%s',
-					package = '%s'`,
-				fn.Caller, callee, fn.File, fn.Package,
-			)
-			if _, err := surrealdb.Query[any](s.db, query, map[string]interface{}{}); err != nil {
-				return fmt.Errorf("error creating call relationship %s->%s: %v", fn.Caller, callee, err)
-			}
+	// Store structs
+	for _, st := range report.Structs {
+		if _, err := surrealdb.Create[types.StructDefinition](s.db, models.Table("structs"), st); err != nil {
+			return fmt.Errorf("error storing struct %s: %v", st.Name, err)
 		}
 	}
 
-	// Store other entities...
-	// (structs, interfaces, globals, imports)
-	// Similar pattern as functions
+	// Store interfaces
+	for _, iface := range report.Interfaces {
+		if _, err := surrealdb.Create[types.InterfaceDefinition](s.db, models.Table("interfaces"), iface); err != nil {
+			return fmt.Errorf("error storing interface %s: %v", iface.Name, err)
+		}
+	}
+
+	// Store globals
+	for _, global := range report.Globals {
+		if _, err := surrealdb.Create[types.GlobalVariable](s.db, models.Table("globals"), global); err != nil {
+			return fmt.Errorf("error storing global %s: %v", global.Name, err)
+		}
+	}
+
+	// Store imports
+	for _, imp := range report.Imports {
+		if _, err := surrealdb.Create[types.ImportDefinition](s.db, models.Table("imports"), imp); err != nil {
+			return fmt.Errorf("error storing import %s: %v", imp.Path, err)
+		}
+	}
 
 	return nil
 }

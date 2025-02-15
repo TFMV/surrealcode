@@ -214,7 +214,11 @@ func TestAnalyzerMetrics(t *testing.T) {
 			a := x + y
 			b := x * y
 			if a > b {
-				return a - b
+				for i := 0; i < 10; i++ {
+					if i%2 == 0 && i < 5 {
+						return a - b
+					}
+				}
 			}
 			return b / a
 		}`
@@ -228,7 +232,28 @@ func TestAnalyzerMetrics(t *testing.T) {
 	require.Len(t, report.Functions, 1)
 
 	fn := report.Functions[0]
-	assert.Greater(t, fn.CyclomaticComplexity, 0)
-	assert.Greater(t, fn.LinesOfCode, 0)
-	assert.False(t, fn.IsDuplicate)
+	metrics := fn.Metrics
+
+	// Test all metric categories
+	assert.Greater(t, metrics.CyclomaticComplexity, 1, "Should have complexity > 1")
+	assert.Greater(t, metrics.LinesOfCode, 0, "Should have lines of code")
+
+	// Halstead metrics
+	assert.Greater(t, metrics.HalsteadMetrics.Volume, 0.0, "Should have Halstead volume")
+	assert.Greater(t, metrics.HalsteadMetrics.Difficulty, 0.0, "Should have Halstead difficulty")
+	assert.Greater(t, metrics.HalsteadMetrics.Effort, 0.0, "Should have Halstead effort")
+
+	// Cognitive complexity
+	assert.Greater(t, metrics.CognitiveComplexity.Score, 0, "Should have cognitive complexity")
+	assert.Greater(t, metrics.CognitiveComplexity.NestedDepth, 1, "Should have nesting")
+	assert.Greater(t, metrics.CognitiveComplexity.LogicalOps, 0, "Should have logical operations")
+
+	// Readability
+	assert.Greater(t, metrics.Readability.NestingDepth, 1, "Should have nesting depth")
+	assert.GreaterOrEqual(t, metrics.Readability.CommentDensity, 0.0, "Should have valid comment density")
+	assert.Greater(t, metrics.Readability.BranchDensity, 0.0, "Should have branch density")
+
+	// Overall metrics
+	assert.Greater(t, metrics.Maintainability, -200.0, "Should have maintainability index")
+	assert.False(t, metrics.IsUnused, "Should not be marked as unused")
 }

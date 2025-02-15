@@ -63,10 +63,10 @@ func main() {
 		if err := analyzer.AnalyzeDirectory(context.Background(), dir); err != nil {
 			log.Fatalf("Failed to analyze directory: %v", err)
 		}
-
-		fmt.Println("Code analysis completed successfully!")
+		// Pretty print the report
+		fmt.Print(analyzer.Report.PrettyPrint())
 	} else {
-		fmt.Println(usage)
+		fmt.Print(usage)
 		os.Exit(1)
 	}
 }
