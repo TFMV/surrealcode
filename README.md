@@ -77,45 +77,18 @@ The summary report is a JSON file that contains the results of the code analysis
 
 ```json
 {
-  "total_functions": 63,
+  "total_functions": 65,
   "total_structs": 27,
-  "total_imports": 80,
+  "total_imports": 76,
   "functions": [
     {
-      "name": "findFunction",
+      "name": "ComputeReadabilityMetrics",
       "file": "analysis/analyzer.go",
-      "complexity": 3,
-      "lines": 8,
-      "maintainability": 97.2,
-      "nesting_depth": 3,
-      "is_unused": true
-    },
-    {
-      "name": "NewCodeDuplicationDetector",
-      "file": "analysis/metrics.go",
-      "complexity": 1,
-      "lines": 5,
-      "maintainability": 99,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "DotProduct",
-      "file": "demo/example.go",
-      "complexity": 2,
-      "lines": 7,
-      "maintainability": 98,
+      "complexity": 10,
+      "lines": 75,
+      "maintainability": 79.6,
       "nesting_depth": 2,
       "is_unused": false
-    },
-    {
-      "name": "computeMetrics",
-      "file": "analysis/analyzer.go",
-      "complexity": 1,
-      "lines": 42,
-      "maintainability": 91.6,
-      "nesting_depth": 1,
-      "is_unused": true
     },
     {
       "name": "CountLines",
@@ -123,258 +96,15 @@ The summary report is a JSON file that contains the results of the code analysis
       "complexity": 2,
       "lines": 9,
       "maintainability": 97.60000000000001,
-      "nesting_depth": 2,
-      "is_unused": false
-    },
-    {
-      "name": "ComputeHalsteadMetrics",
-      "file": "analysis/metrics.go",
-      "complexity": 1,
-      "lines": 42,
-      "maintainability": 91.6,
-      "nesting_depth": 3,
-      "is_unused": false
-    },
-    {
-      "name": "extractFunctionBody",
-      "file": "analysis/metrics.go",
-      "complexity": 1,
-      "lines": 23,
-      "maintainability": 95.4,
-      "nesting_depth": 3,
-      "is_unused": true
-    },
-    {
-      "name": "DetectRecursion",
-      "file": "analysis/recursion.go",
-      "complexity": 14,
-      "lines": 67,
-      "maintainability": 70.92,
-      "nesting_depth": 15,
-      "is_unused": false
-    },
-    {
-      "name": "main",
-      "file": "demo/example.go",
-      "complexity": 1,
-      "lines": 4,
-      "maintainability": 99.2,
       "nesting_depth": 1,
       "is_unused": false
     },
     {
-      "name": "isHotspot",
-      "file": "analysis/analyzer.go",
-      "complexity": 1,
-      "lines": 5,
-      "maintainability": 99,
-      "nesting_depth": 1,
-      "is_unused": true
-    },
-    {
-      "name": "DetectDeadCode",
-      "file": "analysis/analyzer.go",
-      "complexity": 6,
-      "lines": 25,
-      "maintainability": 82.8,
-      "nesting_depth": 6,
-      "is_unused": false
-    },
-    {
-      "name": "isExported",
-      "file": "analysis/analyzer.go",
-      "complexity": 2,
-      "lines": 6,
-      "maintainability": 98.2,
-      "nesting_depth": 2,
-      "is_unused": true
-    },
-    {
-      "name": "TestCountLines",
-      "file": "analysis/metrics_test.go",
-      "complexity": 1,
-      "lines": 14,
-      "maintainability": 97.2,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "InitializeSchema",
-      "file": "schema/schema.go",
-      "complexity": 2,
-      "lines": 7,
-      "maintainability": 98,
-      "nesting_depth": 2,
-      "is_unused": false
-    },
-    {
-      "name": "AnalyzeFunction",
-      "file": "analysis/analyzer.go",
-      "complexity": 1,
-      "lines": 8,
-      "maintainability": 98.4,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "TestMaintainabilityIndex",
-      "file": "analysis/metrics_test.go",
-      "complexity": 1,
-      "lines": 15,
-      "maintainability": 97,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "TestComputeCognitiveComplexity",
-      "file": "analysis/metrics_test.go",
-      "complexity": 2,
-      "lines": 56,
-      "maintainability": 88.2,
-      "nesting_depth": 3,
-      "is_unused": false
-    },
-    {
-      "name": "NewAnalyzerWithoutDB",
-      "file": "analysis/analyzer.go",
-      "complexity": 1,
-      "lines": 8,
-      "maintainability": 98.4,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "TestAnalyzer_GetAnalysis",
+      "name": "TestAnalyzer_ParseGoFile",
       "file": "analysis/analyzer_test.go",
-      "complexity": 1,
-      "lines": 16,
-      "maintainability": 96.8,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "ToString",
-      "file": "expr/cache.go",
-      "complexity": 9,
-      "lines": 70,
-      "maintainability": 73.08,
-      "nesting_depth": 10,
-      "is_unused": false
-    },
-    {
-      "name": "NewMockDB",
-      "file": "db/mock.go",
-      "complexity": 1,
-      "lines": 7,
-      "maintainability": 98.6,
-      "nesting_depth": 2,
-      "is_unused": false
-    },
-    {
-      "name": "NewAnalyzer",
-      "file": "analysis/analyzer.go",
-      "complexity": 2,
-      "lines": 14,
-      "maintainability": 96.60000000000001,
-      "nesting_depth": 2,
-      "is_unused": false
-    },
-    {
-      "name": "GetAnalysis",
-      "file": "analysis/analyzer.go",
-      "complexity": 8,
-      "lines": 61,
-      "maintainability": 75.24,
-      "nesting_depth": 10,
-      "is_unused": false
-    },
-    {
-      "name": "GenerateCodeSummary",
-      "file": "analysis/analyzer.go",
-      "complexity": 8,
-      "lines": 65,
-      "maintainability": 74.52,
-      "nesting_depth": 9,
-      "is_unused": false
-    },
-    {
-      "name": "identifyIssues",
-      "file": "analysis/analyzer.go",
-      "complexity": 6,
-      "lines": 21,
-      "maintainability": 83.52,
-      "nesting_depth": 6,
-      "is_unused": true
-    },
-    {
-      "name": "ComputeReadabilityMetrics",
-      "file": "analysis/analyzer.go",
-      "complexity": 2,
-      "lines": 35,
-      "maintainability": 83.16000000000001,
-      "nesting_depth": 4,
-      "is_unused": false
-    },
-    {
-      "name": "markReachable",
-      "file": "analysis/analyzer.go",
-      "complexity": 5,
-      "lines": 15,
-      "maintainability": 85.14,
-      "nesting_depth": 5,
-      "is_unused": true
-    },
-    {
-      "name": "TestAnalyzer_Initialize",
-      "file": "analysis/analyzer_test.go",
-      "complexity": 1,
-      "lines": 9,
-      "maintainability": 98.2,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "StoreAnalysis",
-      "file": "db/surreal.go",
-      "complexity": 11,
-      "lines": 38,
-      "maintainability": 77.76,
-      "nesting_depth": 11,
-      "is_unused": false
-    },
-    {
-      "name": "simpleTypeString",
-      "file": "parser/parser.go",
-      "complexity": 1,
-      "lines": 14,
-      "maintainability": 97.2,
-      "nesting_depth": 2,
-      "is_unused": true
-    },
-    {
-      "name": "PrettyPrint",
-      "file": "types/models.go",
       "complexity": 3,
-      "lines": 44,
-      "maintainability": 90,
-      "nesting_depth": 3,
-      "is_unused": false
-    },
-    {
-      "name": "ComputeCognitiveComplexity",
-      "file": "analysis/analyzer.go",
-      "complexity": 9,
-      "lines": 71,
-      "maintainability": 72.9,
-      "nesting_depth": 12,
-      "is_unused": false
-    },
-    {
-      "name": "TestHalsteadMetricsComplexFunction",
-      "file": "analysis/metrics_test.go",
-      "complexity": 1,
-      "lines": 20,
-      "maintainability": 96,
+      "lines": 88,
+      "maintainability": 81.2,
       "nesting_depth": 1,
       "is_unused": false
     },
@@ -384,160 +114,25 @@ The summary report is a JSON file that contains the results of the code analysis
       "complexity": 2,
       "lines": 11,
       "maintainability": 97.2,
-      "nesting_depth": 2,
+      "nesting_depth": 1,
       "is_unused": false
     },
     {
-      "name": "TestAnalyzer_ParseGoFile",
+      "name": "TestAnalyzer_GetAnalysis",
       "file": "analysis/analyzer_test.go",
-      "complexity": 3,
-      "lines": 88,
-      "maintainability": 73.08,
-      "nesting_depth": 4,
-      "is_unused": false
-    },
-    {
-      "name": "rabinKarpHash",
-      "file": "analysis/metrics.go",
-      "complexity": 2,
-      "lines": 8,
-      "maintainability": 97.80000000000001,
-      "nesting_depth": 2,
-      "is_unused": true
-    },
-    {
-      "name": "TestComputeHalsteadMetrics",
-      "file": "analysis/metrics_test.go",
-      "complexity": 1,
-      "lines": 15,
-      "maintainability": 97,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "TestDetectDeadCode",
-      "file": "analysis/metrics_test.go",
-      "complexity": 2,
-      "lines": 50,
-      "maintainability": 89.4,
-      "nesting_depth": 3,
-      "is_unused": false
-    },
-    {
-      "name": "Add",
-      "file": "demo/example.go",
-      "complexity": 1,
-      "lines": 3,
-      "maintainability": 99.4,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "DetectDuplication",
-      "file": "analysis/analyzer.go",
-      "complexity": 2,
-      "lines": 17,
-      "maintainability": 96,
-      "nesting_depth": 2,
-      "is_unused": false
-    },
-    {
-      "name": "MaintainabilityIndex",
-      "file": "analysis/analyzer.go",
-      "complexity": 4,
-      "lines": 29,
-      "maintainability": 83.16000000000001,
-      "nesting_depth": 4,
-      "is_unused": false
-    },
-    {
-      "name": "NewExprCache",
-      "file": "expr/cache.go",
-      "complexity": 1,
-      "lines": 5,
-      "maintainability": 79.2,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "min",
-      "file": "analysis/recursion.go",
-      "complexity": 2,
-      "lines": 6,
-      "maintainability": 98.2,
-      "nesting_depth": 2,
-      "is_unused": true
-    },
-    {
-      "name": "Multiply",
-      "file": "demo/example.go",
-      "complexity": 1,
-      "lines": 3,
-      "maintainability": 99.4,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "ParseFile",
-      "file": "parser/parser.go",
-      "complexity": 18,
-      "lines": 107,
-      "maintainability": 62.82,
-      "nesting_depth": 19,
-      "is_unused": false
-    },
-    {
-      "name": "TestDetectRecursion",
-      "file": "analysis/analyzer_test.go",
-      "complexity": 3,
-      "lines": 56,
-      "maintainability": 78.84,
-      "nesting_depth": 4,
-      "is_unused": false
-    },
-    {
-      "name": "TestAnalyzerMetrics",
-      "file": "analysis/analyzer_test.go",
-      "complexity": 1,
-      "lines": 55,
-      "maintainability": 89,
-      "nesting_depth": 1,
-      "is_unused": false
-    },
-    {
-      "name": "computeComplexity",
-      "file": "parser/utils.go",
-      "complexity": 2,
-      "lines": 16,
-      "maintainability": 86.58,
-      "nesting_depth": 4,
-      "is_unused": true
-    },
-    {
-      "name": "computeLOC",
-      "file": "parser/utils.go",
-      "complexity": 2,
-      "lines": 6,
-      "maintainability": 98.2,
-      "nesting_depth": 2,
-      "is_unused": true
-    },
-    {
-      "name": "BenchmarkDetectRecursion",
-      "file": "analysis/analyzer_test.go",
-      "complexity": 2,
-      "lines": 13,
-      "maintainability": 96.80000000000001,
-      "nesting_depth": 2,
-      "is_unused": false
-    },
-    {
-      "name": "TestComputeReadabilityMetrics",
-      "file": "analysis/metrics_test.go",
       "complexity": 1,
       "lines": 16,
       "maintainability": 96.8,
-      "nesting_depth": 1,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "TestHalsteadMetricsComplexFunction",
+      "file": "analysis/metrics_test.go",
+      "complexity": 1,
+      "lines": 20,
+      "maintainability": 96,
+      "nesting_depth": 0,
       "is_unused": false
     },
     {
@@ -546,43 +141,88 @@ The summary report is a JSON file that contains the results of the code analysis
       "complexity": 1,
       "lines": 21,
       "maintainability": 95.8,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "PrettyPrint",
+      "file": "types/models.go",
+      "complexity": 3,
+      "lines": 44,
+      "maintainability": 90,
       "nesting_depth": 1,
       "is_unused": false
     },
     {
-      "name": "TestReadabilityWithNestedBlocks",
-      "file": "analysis/metrics_test.go",
-      "complexity": 1,
-      "lines": 19,
-      "maintainability": 96.2,
+      "name": "GenerateCodeSummary",
+      "file": "analysis/analyzer.go",
+      "complexity": 8,
+      "lines": 65,
+      "maintainability": 82.8,
       "nesting_depth": 1,
       "is_unused": false
     },
     {
-      "name": "Clear",
-      "file": "expr/cache.go",
+      "name": "StoreAnalysis",
+      "file": "db/surreal.go",
+      "complexity": 11,
+      "lines": 38,
+      "maintainability": 86.4,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "findFunction",
+      "file": "analysis/analyzer.go",
+      "complexity": 3,
+      "lines": 8,
+      "maintainability": 97.2,
+      "nesting_depth": 1,
+      "is_unused": true
+    },
+    {
+      "name": "Multiply",
+      "file": "demo/example.go",
       "complexity": 1,
       "lines": 3,
       "maintainability": 99.4,
-      "nesting_depth": 1,
+      "nesting_depth": 0,
       "is_unused": false
     },
     {
-      "name": "NewMetricsAnalyzer",
+      "name": "AnalyzeFunction",
       "file": "analysis/analyzer.go",
       "complexity": 1,
-      "lines": 5,
-      "maintainability": 99,
+      "lines": 8,
+      "maintainability": 98.4,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "NewAnalyzer",
+      "file": "analysis/analyzer.go",
+      "complexity": 2,
+      "lines": 14,
+      "maintainability": 96.60000000000001,
       "nesting_depth": 1,
       "is_unused": false
     },
     {
-      "name": "Get",
-      "file": "expr/cache.go",
-      "complexity": 2,
-      "lines": 8,
-      "maintainability": 97.80000000000001,
-      "nesting_depth": 2,
+      "name": "ComputeHalsteadMetrics",
+      "file": "analysis/metrics.go",
+      "complexity": 1,
+      "lines": 42,
+      "maintainability": 91.6,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "NewMockDB",
+      "file": "db/mock.go",
+      "complexity": 1,
+      "lines": 7,
+      "maintainability": 98.6,
+      "nesting_depth": 0,
       "is_unused": false
     },
     {
@@ -590,17 +230,107 @@ The summary report is a JSON file that contains the results of the code analysis
       "file": "db/surreal.go",
       "complexity": 4,
       "lines": 20,
-      "maintainability": 84.78,
-      "nesting_depth": 4,
+      "maintainability": 94.2,
+      "nesting_depth": 1,
       "is_unused": false
     },
     {
-      "name": "AnalyzeDirectory",
+      "name": "isHotspot",
       "file": "analysis/analyzer.go",
-      "complexity": 3,
+      "complexity": 1,
+      "lines": 5,
+      "maintainability": 99,
+      "nesting_depth": 0,
+      "is_unused": true
+    },
+    {
+      "name": "identifyIssues",
+      "file": "analysis/analyzer.go",
+      "complexity": 6,
+      "lines": 21,
+      "maintainability": 92.8,
+      "nesting_depth": 1,
+      "is_unused": true
+    },
+    {
+      "name": "DetectDuplication",
+      "file": "analysis/analyzer.go",
+      "complexity": 2,
+      "lines": 17,
+      "maintainability": 96,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "Visit",
+      "file": "analysis/analyzer.go",
+      "complexity": 4,
+      "lines": 44,
+      "maintainability": 89.4,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "ComputeCognitiveComplexity",
+      "file": "analysis/analyzer.go",
+      "complexity": 7,
+      "lines": 73,
+      "maintainability": 81.80000000000001,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "DetectDeadCode",
+      "file": "analysis/analyzer.go",
+      "complexity": 6,
+      "lines": 25,
+      "maintainability": 92,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "TestMaintainabilityIndex",
+      "file": "analysis/metrics_test.go",
+      "complexity": 1,
       "lines": 15,
-      "maintainability": 95.8,
-      "nesting_depth": 3,
+      "maintainability": 97,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "TestCountLines",
+      "file": "analysis/metrics_test.go",
+      "complexity": 1,
+      "lines": 14,
+      "maintainability": 97.2,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "DotProduct",
+      "file": "demo/example.go",
+      "complexity": 2,
+      "lines": 7,
+      "maintainability": 98,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "NewCodeDuplicationDetector",
+      "file": "analysis/metrics.go",
+      "complexity": 1,
+      "lines": 5,
+      "maintainability": 99,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "TestComputeCognitiveComplexity",
+      "file": "analysis/metrics_test.go",
+      "complexity": 2,
+      "lines": 56,
+      "maintainability": 88.2,
+      "nesting_depth": 0,
       "is_unused": false
     },
     {
@@ -609,25 +339,34 @@ The summary report is a JSON file that contains the results of the code analysis
       "complexity": 1,
       "lines": 5,
       "maintainability": 99,
-      "nesting_depth": 1,
+      "nesting_depth": 0,
       "is_unused": false
     },
     {
-      "name": "TestDetectDuplication",
+      "name": "ParseFile",
+      "file": "parser/parser.go",
+      "complexity": 18,
+      "lines": 107,
+      "maintainability": 69.8,
+      "nesting_depth": 3,
+      "is_unused": false
+    },
+    {
+      "name": "TestComputeHalsteadMetrics",
       "file": "analysis/metrics_test.go",
       "complexity": 1,
-      "lines": 22,
-      "maintainability": 95.6,
-      "nesting_depth": 1,
+      "lines": 15,
+      "maintainability": 97,
+      "nesting_depth": 0,
       "is_unused": false
     },
     {
-      "name": "SquareRoot",
-      "file": "demo/example.go",
+      "name": "TestComputeReadabilityMetrics",
+      "file": "analysis/metrics_test.go",
       "complexity": 1,
-      "lines": 3,
-      "maintainability": 99.4,
-      "nesting_depth": 1,
+      "lines": 16,
+      "maintainability": 96.8,
+      "nesting_depth": 0,
       "is_unused": false
     },
     {
@@ -636,8 +375,44 @@ The summary report is a JSON file that contains the results of the code analysis
       "complexity": 1,
       "lines": 5,
       "maintainability": 99,
-      "nesting_depth": 1,
+      "nesting_depth": 0,
       "is_unused": false
+    },
+    {
+      "name": "extractFunctionBody",
+      "file": "analysis/metrics.go",
+      "complexity": 1,
+      "lines": 23,
+      "maintainability": 95.4,
+      "nesting_depth": 0,
+      "is_unused": true
+    },
+    {
+      "name": "TestDetectDuplication",
+      "file": "analysis/metrics_test.go",
+      "complexity": 1,
+      "lines": 22,
+      "maintainability": 95.6,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "DetectRecursion",
+      "file": "analysis/recursion.go",
+      "complexity": 14,
+      "lines": 67,
+      "maintainability": 78.8,
+      "nesting_depth": 3,
+      "is_unused": false
+    },
+    {
+      "name": "min",
+      "file": "analysis/recursion.go",
+      "complexity": 2,
+      "lines": 6,
+      "maintainability": 98.2,
+      "nesting_depth": 1,
+      "is_unused": true
     },
     {
       "name": "ExecuteOperations",
@@ -645,7 +420,250 @@ The summary report is a JSON file that contains the results of the code analysis
       "complexity": 1,
       "lines": 11,
       "maintainability": 97.8,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "Clear",
+      "file": "expr/cache.go",
+      "complexity": 1,
+      "lines": 3,
+      "maintainability": 99.4,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "markReachable",
+      "file": "analysis/analyzer.go",
+      "complexity": 5,
+      "lines": 15,
+      "maintainability": 94.6,
+      "nesting_depth": 2,
+      "is_unused": true
+    },
+    {
+      "name": "TestAnalyzerMetrics",
+      "file": "analysis/analyzer_test.go",
+      "complexity": 1,
+      "lines": 55,
+      "maintainability": 89,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "NewMetricsAnalyzer",
+      "file": "analysis/analyzer.go",
+      "complexity": 1,
+      "lines": 5,
+      "maintainability": 99,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "AnalyzeDirectory",
+      "file": "analysis/analyzer.go",
+      "complexity": 3,
+      "lines": 15,
+      "maintainability": 95.8,
       "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "TestDetectRecursion",
+      "file": "analysis/analyzer_test.go",
+      "complexity": 3,
+      "lines": 56,
+      "maintainability": 87.6,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "TestAnalyzer_Initialize",
+      "file": "analysis/analyzer_test.go",
+      "complexity": 1,
+      "lines": 9,
+      "maintainability": 98.2,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "TestDetectDeadCode",
+      "file": "analysis/metrics_test.go",
+      "complexity": 2,
+      "lines": 50,
+      "maintainability": 89.4,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "InitializeSchema",
+      "file": "schema/schema.go",
+      "complexity": 2,
+      "lines": 7,
+      "maintainability": 98,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "NewAnalyzerWithoutDB",
+      "file": "analysis/analyzer.go",
+      "complexity": 1,
+      "lines": 8,
+      "maintainability": 98.4,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "computeMetrics",
+      "file": "analysis/analyzer.go",
+      "complexity": 1,
+      "lines": 42,
+      "maintainability": 91.6,
+      "nesting_depth": 0,
+      "is_unused": true
+    },
+    {
+      "name": "rabinKarpHash",
+      "file": "analysis/metrics.go",
+      "complexity": 2,
+      "lines": 8,
+      "maintainability": 97.80000000000001,
+      "nesting_depth": 0,
+      "is_unused": true
+    },
+    {
+      "name": "SquareRoot",
+      "file": "demo/example.go",
+      "complexity": 1,
+      "lines": 3,
+      "maintainability": 99.4,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "NewExprCache",
+      "file": "expr/cache.go",
+      "complexity": 1,
+      "lines": 5,
+      "maintainability": 99,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "ToString",
+      "file": "expr/cache.go",
+      "complexity": 9,
+      "lines": 70,
+      "maintainability": 81.2,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "simpleTypeString",
+      "file": "parser/parser.go",
+      "complexity": 1,
+      "lines": 14,
+      "maintainability": 97.2,
+      "nesting_depth": 0,
+      "is_unused": true
+    },
+    {
+      "name": "TestReadabilityWithNestedBlocks",
+      "file": "analysis/metrics_test.go",
+      "complexity": 1,
+      "lines": 19,
+      "maintainability": 96.2,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "main",
+      "file": "demo/example.go",
+      "complexity": 1,
+      "lines": 4,
+      "maintainability": 99.2,
+      "nesting_depth": 0,
+      "is_unused": false
+    },
+    {
+      "name": "Get",
+      "file": "expr/cache.go",
+      "complexity": 2,
+      "lines": 8,
+      "maintainability": 97.80000000000001,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "computeLOC",
+      "file": "parser/utils.go",
+      "complexity": 2,
+      "lines": 6,
+      "maintainability": 98.2,
+      "nesting_depth": 1,
+      "is_unused": true
+    },
+    {
+      "name": "GetAnalysis",
+      "file": "analysis/analyzer.go",
+      "complexity": 8,
+      "lines": 61,
+      "maintainability": 83.6,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "MaintainabilityIndex",
+      "file": "analysis/analyzer.go",
+      "complexity": 4,
+      "lines": 29,
+      "maintainability": 92.4,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "computeComplexity",
+      "file": "parser/utils.go",
+      "complexity": 2,
+      "lines": 16,
+      "maintainability": 96.2,
+      "nesting_depth": 1,
+      "is_unused": true
+    },
+    {
+      "name": "children",
+      "file": "analysis/analyzer.go",
+      "complexity": 2,
+      "lines": 11,
+      "maintainability": 97.2,
+      "nesting_depth": 1,
+      "is_unused": true
+    },
+    {
+      "name": "isExported",
+      "file": "analysis/analyzer.go",
+      "complexity": 2,
+      "lines": 6,
+      "maintainability": 98.2,
+      "nesting_depth": 1,
+      "is_unused": true
+    },
+    {
+      "name": "BenchmarkDetectRecursion",
+      "file": "analysis/analyzer_test.go",
+      "complexity": 2,
+      "lines": 13,
+      "maintainability": 96.80000000000001,
+      "nesting_depth": 1,
+      "is_unused": false
+    },
+    {
+      "name": "Add",
+      "file": "demo/example.go",
+      "complexity": 1,
+      "lines": 3,
+      "maintainability": 99.4,
+      "nesting_depth": 0,
       "is_unused": false
     }
   ]
