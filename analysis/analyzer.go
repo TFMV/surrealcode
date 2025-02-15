@@ -48,7 +48,7 @@ func (m *MetricsAnalyzer) AnalyzeFunction(fn *ast.FuncDecl) (int, int, bool) {
 	readability := ComputeReadabilityMetrics(fn, fset)
 	isDuplicate := m.duplicationDetector.DetectDuplication(fn)
 
-	return int(halstead.Difficulty), readability.FunctionLength, isDuplicate
+	return int(halstead.Difficulty), int(readability.FunctionLength), isDuplicate
 }
 
 // NewAnalyzer creates a new Analyzer with the given configuration
@@ -410,73 +410,39 @@ func CountLines(fn *ast.FuncDecl, fset *token.FileSet) int {
 // ComputeCognitiveComplexity analyzes the cognitive complexity of a function
 func ComputeCognitiveComplexity(fn *ast.FuncDecl) CognitiveComplexity {
 	var cc CognitiveComplexity
+	currentNesting := 0
 
-	// visit recursively traverses the AST, passing along the current nesting level.
-	var visit func(n ast.Node, nesting int)
-	visit = func(n ast.Node, nesting int) {
-		if n == nil {
-			return
-		}
-		// Update maximum nesting depth if needed.
-		if nesting > cc.NestedDepth {
-			cc.NestedDepth = nesting
-		}
+	ast.Inspect(fn, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.IfStmt:
 			cc.BranchingScore++
-			cc.Score += 1               // if statement adds 1
-			visit(node.Cond, nesting)   // condition: same nesting
-			visit(node.Body, nesting+1) // body: deeper nesting
-			visit(node.Else, nesting+1) // else branch: deeper nesting
-			return
-		case *ast.ForStmt:
+			cc.Score += 1 + currentNesting
+			currentNesting++
+			if node.Else != nil {
+				cc.Score++ // Additional point for else
+			}
+		case *ast.ForStmt, *ast.RangeStmt:
 			cc.BranchingScore++
-			cc.Score += 2 // for loop adds 2
-			if node.Init != nil {
-				visit(node.Init, nesting)
-			}
-			if node.Cond != nil {
-				visit(node.Cond, nesting)
-			}
-			if node.Post != nil {
-				visit(node.Post, nesting)
-			}
-			visit(node.Body, nesting+1)
-			return
-		case *ast.RangeStmt:
+			cc.Score += 1 + currentNesting
+			currentNesting++
+		case *ast.SwitchStmt, *ast.SelectStmt:
 			cc.BranchingScore++
-			cc.Score += 2 // range loop adds 2
-			visit(node.Body, nesting+1)
-			return
-		case *ast.SwitchStmt:
-			cc.BranchingScore++
-			cc.Score += 1 // switch adds 1
-			if node.Tag != nil {
-				visit(node.Tag, nesting)
-			}
-			visit(node.Body, nesting+1)
-			return
+			cc.Score += 1 + currentNesting
+			currentNesting++
 		case *ast.BinaryExpr:
 			if node.Op == token.LAND || node.Op == token.LOR {
 				cc.LogicalOps++
-				cc.Score += 1 // each && or || adds 1
+				cc.Score++
 			}
-			visit(node.X, nesting)
-			visit(node.Y, nesting)
-			return
+		case *ast.BlockStmt:
+			if currentNesting > cc.NestedDepth {
+				cc.NestedDepth = currentNesting
+			}
+			defer func() { currentNesting-- }()
 		}
-		// For any other node, traverse its children.
-		ast.Inspect(n, func(child ast.Node) bool {
-			// Skip the current node to avoid infinite recursion.
-			if child == n {
-				return true
-			}
-			visit(child, nesting)
-			return false
-		})
-	}
+		return true
+	})
 
-	visit(fn, 0)
 	return cc
 }
 
