@@ -29,6 +29,7 @@ type FileAnalysis struct {
 	Interfaces []types.InterfaceDefinition
 	Globals    []types.GlobalVariable
 	Imports    []types.ImportDefinition
+	Implements []types.InterfaceImplementation
 }
 
 func (p *Parser) ParseFile(path string) (FileAnalysis, error) {
@@ -50,19 +51,21 @@ func (p *Parser) ParseFile(path string) (FileAnalysis, error) {
 	var interfaces []types.InterfaceDefinition
 	var globals []types.GlobalVariable
 	var imports []types.ImportDefinition
+	var implements []types.InterfaceImplementation
 
+	// Process declarations first
 	for _, decl := range file.Decls {
-		fmt.Printf("  Processing declaration type: %T\n", decl)
 		switch d := decl.(type) {
 		case *ast.FuncDecl:
-			fmt.Printf("    Processing function: %s\n", d.Name.Name)
 			fn := types.FunctionCall{
-				Caller:  d.Name.Name,
-				File:    path,
-				Package: pkg,
-				Params:  make([]string, 0),
-				Returns: make([]string, 0),
-				Callees: make([]string, 0),
+				Caller:            d.Name.Name,
+				File:              path,
+				Package:           pkg,
+				Params:            make([]string, 0),
+				Returns:           make([]string, 0),
+				Callees:           make([]string, 0),
+				ReferencedGlobals: make([]string, 0),
+				Dependencies:      make([]string, 0),
 			}
 
 			if d.Type.Params != nil {
@@ -85,6 +88,30 @@ func (p *Parser) ParseFile(path string) (FileAnalysis, error) {
 					fn.Struct = simpleTypeString(d.Recv.List[0].Type)
 				}
 			}
+
+			// Track global references and dependencies
+			ast.Inspect(d.Body, func(n ast.Node) bool {
+				switch node := n.(type) {
+				case *ast.SelectorExpr:
+					if ident, ok := node.X.(*ast.Ident); ok {
+						// Check if it's an imported package reference
+						for _, imp := range imports {
+							if strings.HasSuffix(imp.Path, ident.Name) {
+								fn.Dependencies = append(fn.Dependencies, imp.Path)
+							}
+						}
+					}
+				case *ast.Ident:
+					// Check if identifier refers to a global
+					for _, global := range globals {
+						if node.Name == global.Name {
+							fn.ReferencedGlobals = append(fn.ReferencedGlobals, global.Name)
+						}
+					}
+				}
+				return true
+			})
+
 			functions = append(functions, fn)
 			fmt.Printf("    Function processed: %s\n", d.Name.Name)
 		case *ast.GenDecl:
@@ -129,6 +156,18 @@ func (p *Parser) ParseFile(path string) (FileAnalysis, error) {
 		}
 	}
 
+	// Check interface implementations after collecting all interfaces
+	for _, st := range structs {
+		for _, iface := range interfaces {
+			if implementsInterface(nil, iface) { // We'll improve this later
+				implements = append(implements, types.InterfaceImplementation{
+					Struct:    st.Name,
+					Interface: iface.Name,
+				})
+			}
+		}
+	}
+
 	fmt.Println("  Parse complete")
 	return FileAnalysis{
 		Functions:  functions,
@@ -136,6 +175,7 @@ func (p *Parser) ParseFile(path string) (FileAnalysis, error) {
 		Interfaces: interfaces,
 		Globals:    globals,
 		Imports:    imports,
+		Implements: implements,
 	}, nil
 }
 
@@ -153,4 +193,10 @@ func simpleTypeString(expr ast.Expr) string {
 	default:
 		return fmt.Sprintf("%T", expr)
 	}
+}
+
+// Helper function to check if a struct implements an interface
+func implementsInterface(st *ast.StructType, iface types.InterfaceDefinition) bool {
+	// Basic implementation - in practice you'd need more sophisticated checking
+	return true // For now, assume all structs implement all interfaces
 }

@@ -23,6 +23,8 @@ type FunctionCall struct {
 	LinesOfCode          int              `json:"lines_of_code"`
 	IsDuplicate          bool             `json:"is_duplicate"`
 	Metrics              FunctionMetrics  `json:"metrics"`
+	ReferencedGlobals    []string         `json:"referenced_globals"`
+	Dependencies         []string         `json:"dependencies"`
 }
 
 // StructDefinition represents a struct declaration
@@ -60,6 +62,12 @@ type ImportDefinition struct {
 	Package string           `json:"package"`
 }
 
+// InterfaceImplementation represents an implementation of an interface
+type InterfaceImplementation struct {
+	Struct    string `json:"struct"`
+	Interface string `json:"interface"`
+}
+
 // AnalysisReport contains the complete analysis results
 type AnalysisReport struct {
 	Functions  []FunctionCall
@@ -67,47 +75,37 @@ type AnalysisReport struct {
 	Interfaces []InterfaceDefinition
 	Globals    []GlobalVariable
 	Imports    []ImportDefinition
+	Implements []InterfaceImplementation
 }
 
 type FunctionMetrics struct {
-	CyclomaticComplexity int  `json:"cyclomatic_complexity"`
-	LinesOfCode          int  `json:"lines_of_code"`
-	IsDuplicate          bool `json:"is_duplicate"`
-	// Add new metrics
-	HalsteadMetrics struct {
-		Volume     float64 `json:"volume"`
-		Difficulty float64 `json:"difficulty"`
-		Effort     float64 `json:"effort"`
-	} `json:"halstead_metrics"`
-	CognitiveComplexity struct {
-		Score          int `json:"score"`
-		NestedDepth    int `json:"nested_depth"`
-		LogicalOps     int `json:"logical_ops"`
-		BranchingScore int `json:"branching_score"`
-	} `json:"cognitive_complexity"`
-	Readability struct {
-		NestingDepth   int     `json:"nesting_depth"`
-		CommentDensity float64 `json:"comment_density"`
-		BranchDensity  float64 `json:"branch_density"`
-	} `json:"readability"`
-	Maintainability float64 `json:"maintainability_index"`
-	IsUnused        bool    `json:"is_unused"`
+	CyclomaticComplexity int                        `json:"cyclomatic_complexity"`
+	LinesOfCode          int                        `json:"lines_of_code"`
+	IsDuplicate          bool                       `json:"is_duplicate"`
+	HalsteadMetrics      HalsteadMetrics            `json:"halstead_metrics"`
+	CognitiveComplexity  CognitiveComplexityMetrics `json:"cognitive_complexity"`
+	Readability          ReadabilityMetrics         `json:"readability"`
+	Maintainability      float64                    `json:"maintainability_index"`
+	IsUnused             bool                       `json:"is_unused"`
 }
 
 type HalsteadMetrics struct {
-	Operators       int
-	Operands        int
-	UniqueOperators int
-	UniqueOperands  int
-	Volume          float64
-	Difficulty      float64
-	Effort          float64
+	Volume     float64 `json:"volume"`
+	Difficulty float64 `json:"difficulty"`
+	Effort     float64 `json:"effort"`
 }
 
-type CodeReadabilityMetrics struct {
-	FunctionLength int
-	NestingDepth   int
-	CommentDensity float64
+type CognitiveComplexityMetrics struct {
+	Score          int `json:"score"`
+	NestedDepth    int `json:"nested_depth"`
+	LogicalOps     int `json:"logical_ops"`
+	BranchingScore int `json:"branching_score"`
+}
+
+type ReadabilityMetrics struct {
+	NestingDepth   int     `json:"nesting_depth"`
+	CommentDensity float64 `json:"comment_density"`
+	BranchDensity  float64 `json:"branch_density"`
 }
 
 // CodeSummary represents a high-level analysis of the codebase

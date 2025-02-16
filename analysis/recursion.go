@@ -2,22 +2,23 @@ package analysis
 
 import "github.com/TFMV/surrealcode/types"
 
-type recursionData struct {
-	depth     int
-	lowlink   int
-	inStack   bool
-	recursive bool
+type functionNode struct {
+	name    string
+	index   int
+	lowlink int
+	inStack bool
 }
 
 func DetectRecursion(functions map[string]types.FunctionCall) map[string]types.FunctionCall {
 	index := 0
 	stack := []string{}
-	recData := map[string]*recursionData{}
+	recData := map[string]*functionNode{}
 
-	var tarjan func(caller string, depth int)
-	tarjan = func(caller string, depth int) {
-		rec := &recursionData{
-			depth:   index,
+	var tarjan func(caller string)
+	tarjan = func(caller string) {
+		rec := &functionNode{
+			name:    caller,
+			index:   index,
 			lowlink: index,
 			inStack: true,
 		}
@@ -27,24 +28,22 @@ func DetectRecursion(functions map[string]types.FunctionCall) map[string]types.F
 
 		if fn, exists := functions[caller]; exists {
 			for _, callee := range fn.Callees {
-				// Check for direct recursion first
 				if callee == caller {
 					fn.IsRecursive = true
 					functions[caller] = fn
 					continue
 				}
 
-				if _, found := recData[callee]; !found {
-					tarjan(callee, depth+1)
+				if data, found := recData[callee]; !found {
+					tarjan(callee)
 					rec.lowlink = min(rec.lowlink, recData[callee].lowlink)
-				} else if recData[callee].inStack {
-					rec.lowlink = min(rec.lowlink, recData[callee].depth)
+				} else if data.inStack {
+					rec.lowlink = min(rec.lowlink, data.index)
 				}
 			}
 		}
 
-		// Root of an SCC
-		if rec.lowlink == rec.depth {
+		if rec.lowlink == rec.index {
 			var sccNodes []string
 			for {
 				n := stack[len(stack)-1]
@@ -55,7 +54,6 @@ func DetectRecursion(functions map[string]types.FunctionCall) map[string]types.F
 					break
 				}
 			}
-			// Mark all nodes in cycle if SCC size > 1
 			if len(sccNodes) > 1 {
 				for _, n := range sccNodes {
 					if fn, exists := functions[n]; exists {
@@ -67,10 +65,9 @@ func DetectRecursion(functions map[string]types.FunctionCall) map[string]types.F
 		}
 	}
 
-	// Process all nodes
 	for caller := range functions {
 		if _, found := recData[caller]; !found {
-			tarjan(caller, 0)
+			tarjan(caller)
 		}
 	}
 

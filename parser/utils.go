@@ -5,7 +5,7 @@ import (
 	"go/token"
 )
 
-func computeComplexity(node ast.Node) int {
+func ComputeComplexity(node ast.Node) int {
 	complexity := 1 // Base complexity
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch n.(type) {
@@ -22,9 +22,18 @@ func computeComplexity(node ast.Node) int {
 	return complexity
 }
 
-func computeLOC(fset *token.FileSet, node *ast.BlockStmt) int {
+func ComputeLOC(fset *token.FileSet, node *ast.BlockStmt) int {
 	if node == nil {
 		return 0
 	}
 	return fset.Position(node.End()).Line - fset.Position(node.Pos()).Line + 1
+}
+
+func FindFunction(file *ast.File, name string) *ast.FuncDecl {
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == name {
+			return fn
+		}
+	}
+	return nil
 }

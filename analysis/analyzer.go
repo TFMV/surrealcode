@@ -285,46 +285,38 @@ func (c *CodeDuplicationDetector) DetectDuplication(fn *ast.FuncDecl) bool {
 	return false
 }
 
-func computeMetrics(metricsAnalyzer *MetricsAnalyzer, fn *ast.FuncDecl, fset *token.FileSet) types.FunctionMetrics {
+func computeMetrics(m *MetricsAnalyzer, fn *ast.FuncDecl, fset *token.FileSet) types.FunctionMetrics {
+	// Compute all metrics
 	halstead := ComputeHalsteadMetrics(fn)
 	readability := ComputeReadabilityMetrics(fn, fset)
 	cognitive := ComputeCognitiveComplexity(fn)
-	isDup := metricsAnalyzer.duplicationDetector.DetectDuplication(fn)
+	isDuplicate := m.duplicationDetector.DetectDuplication(fn)
+	loc := CountLines(fn, fset)
+
+	// Calculate maintainability index
+	maintainability := MaintainabilityIndex(readability, cognitive.Score, true)
 
 	return types.FunctionMetrics{
-		CyclomaticComplexity: cognitive.BranchingScore + 1,
-		LinesOfCode:          CountLines(fn, fset),
-		IsDuplicate:          isDup,
-		HalsteadMetrics: struct {
-			Volume     float64 `json:"volume"`
-			Difficulty float64 `json:"difficulty"`
-			Effort     float64 `json:"effort"`
-		}{
+		CyclomaticComplexity: readability.CyclomaticPoints,
+		LinesOfCode:          loc,
+		IsDuplicate:          isDuplicate,
+		HalsteadMetrics: types.HalsteadMetrics{
 			Volume:     halstead.Volume,
 			Difficulty: halstead.Difficulty,
 			Effort:     halstead.Effort,
 		},
-		CognitiveComplexity: struct {
-			Score          int `json:"score"`
-			NestedDepth    int `json:"nested_depth"`
-			LogicalOps     int `json:"logical_ops"`
-			BranchingScore int `json:"branching_score"`
-		}{
+		CognitiveComplexity: types.CognitiveComplexityMetrics{
 			Score:          cognitive.Score,
 			NestedDepth:    cognitive.NestedDepth,
 			LogicalOps:     cognitive.LogicalOps,
 			BranchingScore: cognitive.BranchingScore,
 		},
-		Readability: struct {
-			NestingDepth   int     `json:"nesting_depth"`
-			CommentDensity float64 `json:"comment_density"`
-			BranchDensity  float64 `json:"branch_density"`
-		}{
+		Readability: types.ReadabilityMetrics{
 			NestingDepth:   readability.NestingDepth,
 			CommentDensity: readability.CommentDensity,
 			BranchDensity:  readability.BranchDensity,
 		},
-		Maintainability: MaintainabilityIndex(readability, cognitive.BranchingScore, isDup),
+		Maintainability: maintainability,
 	}
 }
 
