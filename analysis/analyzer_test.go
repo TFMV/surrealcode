@@ -9,7 +9,6 @@ import (
 	"github.com/TFMV/surrealcode/analysis"
 	"github.com/TFMV/surrealcode/db"
 	"github.com/TFMV/surrealcode/expr"
-	"github.com/TFMV/surrealcode/parser"
 	"github.com/TFMV/surrealcode/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +17,6 @@ import (
 func TestAnalyzer_ParseGoFile(t *testing.T) {
 	analyzer := &analysis.Analyzer{
 		ExprCache: expr.NewExprCache(100),
-		Parser:    parser.NewParser(expr.NewExprCache(100)),
 	}
 
 	tests := []struct {
@@ -88,7 +86,7 @@ func TestAnalyzer_ParseGoFile(t *testing.T) {
 			tmpFile := filepath.Join(t.TempDir(), "test.go")
 			require.NoError(t, os.WriteFile(tmpFile, []byte(tt.input), 0644))
 
-			analysis, err := analyzer.Parser.ParseFile(tmpFile)
+			analysis, err := analyzer.AnalyzeFile(tmpFile)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -174,7 +172,6 @@ func TestAnalyzer_Initialize(t *testing.T) {
 func TestAnalyzer_GetAnalysis(t *testing.T) {
 	analyzer := &analysis.Analyzer{
 		ExprCache: expr.NewExprCache(100),
-		Parser:    parser.NewParser(expr.NewExprCache(100)),
 		Metrics:   analysis.NewMetricsAnalyzer(),
 	}
 
@@ -205,7 +202,6 @@ func BenchmarkDetectRecursion(b *testing.B) {
 func TestAnalyzerMetrics(t *testing.T) {
 	analyzer := &analysis.Analyzer{
 		ExprCache: expr.NewExprCache(100),
-		Parser:    parser.NewParser(expr.NewExprCache(100)),
 		Metrics:   analysis.NewMetricsAnalyzer(),
 	}
 

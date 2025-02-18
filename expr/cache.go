@@ -3,23 +3,35 @@ package expr
 import (
 	"fmt"
 	"go/ast"
+	"runtime"
 	"strings"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
 )
 
+// ExprCache caches the string representation of AST expressions.
 type ExprCache struct {
 	cache *lru.Cache
-	mu    sync.RWMutex // Add mutex for thread safety
+	mu    sync.RWMutex // Mutex for thread safety
 }
 
+// NewExprCache creates a new ExprCache of the given size and registers a cleanup function.
 func NewExprCache(size int) *ExprCache {
-	return &ExprCache{
+	ec := &ExprCache{
 		cache: lru.New(size),
 	}
+
+	// Register a cleanup function that clears the cache when ec is garbage collected.
+	runtime.AddCleanup(ec, func(c *lru.Cache) {
+		fmt.Println("Cleaning up ExprCache: clearing underlying cache")
+		c.Clear()
+	}, ec.cache)
+
+	return ec
 }
 
+// Get returns the cached string for the given expression, if available.
 func (c *ExprCache) Get(expr ast.Expr) (string, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -29,14 +41,17 @@ func (c *ExprCache) Get(expr ast.Expr) (string, bool) {
 	return "", false
 }
 
+// Put adds the string representation for an expression into the cache.
 func (c *ExprCache) Put(expr ast.Expr, str string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.cache.Add(expr, str)
 }
 
+// ToString returns the string representation for the given AST expression,
+// using the cache to avoid redundant computations.
 func (c *ExprCache) ToString(expr ast.Expr) string {
-	// First try with read lock
+	// Try reading with a read lock first.
 	c.mu.RLock()
 	if val, ok := c.cache.Get(expr); ok {
 		c.mu.RUnlock()
@@ -44,16 +59,16 @@ func (c *ExprCache) ToString(expr ast.Expr) string {
 	}
 	c.mu.RUnlock()
 
-	// If not found, acquire write lock and compute
+	// If not found, acquire a write lock and compute the string.
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Check again in case another goroutine computed it
+	// Double-check in case another goroutine computed it meanwhile.
 	if val, ok := c.cache.Get(expr); ok {
 		return val.(string)
 	}
 
-	// Generate string representation
+	// Compute string representation based on the expression type.
 	var result string
 	switch e := expr.(type) {
 	case *ast.Ident:
@@ -106,6 +121,9 @@ func (c *ExprCache) ToString(expr ast.Expr) string {
 	return result
 }
 
+// Clear clears the cache.
 func (c *ExprCache) Clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.cache.Clear()
 }
