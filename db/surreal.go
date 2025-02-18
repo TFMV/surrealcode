@@ -1,8 +1,11 @@
+//go:build go1.24
+
 package db
 
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"github.com/TFMV/surrealcode/types"
 	surrealdb "github.com/surrealdb/surrealdb.go"
@@ -28,10 +31,17 @@ func NewSurrealDB(config Config) (*SurrealDB, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	return &SurrealDB{
+	sdb := &SurrealDB{
 		db:     db,
 		config: config,
-	}, nil
+	}
+
+	// Add cleanup for database connection
+	runtime.AddCleanup(sdb, func(db *surrealdb.DB) {
+		db.Close()
+	}, sdb.db)
+
+	return sdb, nil
 }
 
 func (s *SurrealDB) Initialize(ctx context.Context) error {
@@ -68,6 +78,10 @@ func (s *SurrealDB) StoreAnalysis(ctx context.Context, report types.AnalysisRepo
 			"struct":       fn.Struct,
 			"is_recursive": fn.IsRecursive,
 			"metrics":      fn.Metrics,
+			"is_duplicate": fn.IsDuplicate,
+			"is_interface": fn.IsInterface,
+			"is_struct":    fn.IsStruct,
+			"is_global":    fn.IsGlobal,
 		}
 		if _, err := surrealdb.Create[map[string]interface{}](s.db, "functions", function); err != nil {
 			return fmt.Errorf("error storing function %s: %v", fn.Caller, err)
